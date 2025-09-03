@@ -19,11 +19,11 @@ void adjoint_kirchhoff::run(std::vector<double> d) {
 				int u = i_src * env.n_rcvs * env.n_ts + i_rcv * env.n_ts + it;
 				for (int iz = 0; iz < env.n_zs; iz++) {
 					//Get Trial Z Point
-					int z_coord = iz * env.dz;
+					float z_coord = iz * env.dz;
 
 					for (int ix = 0; ix < env.n_xs; ix++) {
 						//Get Trial X Point
-						int x_coord = ix * env.dx;
+						float x_coord = ix * env.dx;
 						int p = ix * env.n_zs + iz;
 
 						//Calculate Travel Times

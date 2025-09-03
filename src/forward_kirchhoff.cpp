@@ -20,11 +20,11 @@ void forward_kirchhoff::run() {
 
 			for (int iz = 0; iz < env.n_zs; iz++) {
 				//Get Trial Z Point
-				int z_coord = iz * env.dz;
+				float z_coord = iz * env.dz;
 
 				for (int ix = 0; ix < env.n_xs; ix++) {
 					//Get Trial X Point
-					int x_coord = ix * env.dx;
+					float x_coord = ix * env.dx;
 
 					int p = ix * env.n_zs + iz;
 
@@ -32,7 +32,7 @@ void forward_kirchhoff::run() {
 					double tau_src = sqrt(pow(z_coord, 2.0) + pow(x_coord - src_coord, 2.0)) / env.vel;
 					double tau_rcv = sqrt(pow(z_coord, 2.0) + pow(x_coord - rcv_coord, 2.0)) / env.vel;
 
-					if (env.m[p] > .2){
+					if (std::abs(env.m[p]) > 1e-6){
 
 						for (int it = 0; it < env.n_ts; it++) {
 							int u = i_src * env.n_rcvs * env.n_ts + i_rcv * env.n_ts + it;
