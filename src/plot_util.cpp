@@ -11,11 +11,12 @@ void plot_util::plot_line(const std::vector<float>& x, const std::vector<float>&
 }
 
 // Plot Images
-void plot_util::plot_image(const std::vector<std::vector<float>>& data){
+void plot_util::plot_image(const std::vector<std::vector<float>>& data, const std::string& label){
     plt::image(data, true);
     plt::colorbar();
+    plt::title(label);
 }
-void plot_util::plot_image(const std::vector<float>& data, const int height, const int width){
+void plot_util::plot_image(const std::vector<float>& data, const int height, const int width, const std::string& label){
     if (data.size() != static_cast<size_t>(height * width)) {
         throw std::runtime_error("Data size does not match given height*width");
     }
@@ -30,7 +31,7 @@ void plot_util::plot_image(const std::vector<float>& data, const int height, con
 
     plt::image(mapped_data, true);
     plt::colorbar();
-    plt::title("Test");
+    plt::title(label);
 }
 
 // Utilities

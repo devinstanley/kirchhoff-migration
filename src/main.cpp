@@ -17,7 +17,7 @@ int main(int, char**){
     std::cout << "Model Generated" << std::endl;
     plot_util::create_figure(500, 1000);
     plot_util::subplot(1, 2, 0);
-    plot_util::plot_image(env.ref_space);
+    plot_util::plot_image(env.ref_space, "Generated Environment");
 
     forward_kirchhoff forward(env);
     forward.run();
@@ -27,7 +27,7 @@ int main(int, char**){
     adjoint.run(forward.d);
     std::cout << "Adjoint Run" << std::endl;
     plot_util::subplot(1, 2, 1);
-    plot_util::plot_image(std::vector<float> (adjoint.mig.begin(), adjoint.mig.end()), env.n_xs, env.n_zs);
+    plot_util::plot_image(std::vector<float> (adjoint.mig.begin(), adjoint.mig.end()), env.n_xs, env.n_zs, "Basic Seismic Migration");
     plt::show();
 
     //env.m_to_file("m.csv");
