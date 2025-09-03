@@ -41,7 +41,7 @@ void adjoint_kirchhoff::run(std::vector<double> d) {
 		}
 	}
 }
-void adjoint_kirchhoff::mig_to_file(std::string filename) {
+void adjoint_kirchhoff::mig_to_file(const std::string& filename) {
 	std::ofstream out(filename);
 	if (out.is_open()) {
 		for (int ii = 0; ii < mig.size(); ii++) {

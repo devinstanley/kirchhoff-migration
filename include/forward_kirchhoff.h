@@ -11,6 +11,6 @@ class forward_kirchhoff{
         forward_kirchhoff(seismic_model env);
 
         void run();
-        void d_to_file();
-        void L_to_file();
+        void d_to_file(const std::string& path);
+        void L_to_file(const std::string& path);
 };

@@ -77,7 +77,7 @@ double seismic_model::ricker_wavelet(double tt) {
 	return wavelet;
 }
 
-void seismic_model::m_to_file(std::string filename) {
+void seismic_model::m_to_file(const std::string& filename) {
 	std::ofstream out(filename);
 	out << std::fixed << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::endl;
 	if (out.is_open()) {

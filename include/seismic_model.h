@@ -45,5 +45,5 @@ class seismic_model{
 	double ricker_wavelet(double tt);
 
     // IO Utility
-	void m_to_file(std::string filename);
+	void m_to_file(const std::string& filename);
 };

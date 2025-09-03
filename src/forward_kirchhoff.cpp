@@ -49,9 +49,9 @@ void forward_kirchhoff::run() {
 	}
 }
 
-void forward_kirchhoff::d_to_file() {
+void forward_kirchhoff::d_to_file(const std::string& path) {
 
-	std::ofstream out("ForwardKirchoff_Layer_D.csv");
+	std::ofstream out(path);
 	out << std::fixed << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::endl;
 	if (out.is_open()) {
 		for (int ii = 0; ii < d.size(); ii++) {
@@ -61,9 +61,9 @@ void forward_kirchhoff::d_to_file() {
 	out.close();
 }
 
-void forward_kirchhoff::L_to_file() {
+void forward_kirchhoff::L_to_file(const std::string& path) {
 	
-	std::ofstream out("ForwardKirchoff_Layer_L.csv");
+	std::ofstream out(path);
 	if (out.is_open()) {
 		out << std::fixed << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::endl;
 		for (std::vector<double> row: L) {

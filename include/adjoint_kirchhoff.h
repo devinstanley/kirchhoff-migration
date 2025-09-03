@@ -11,5 +11,5 @@ public:
 
 	adjoint_kirchhoff(seismic_model env);
 	void run(std::vector<double> d);
-	void mig_to_file(std::string filename);
+	void mig_to_file(const std::string& filename);
 };
