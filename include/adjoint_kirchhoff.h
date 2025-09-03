@@ -1,0 +1,15 @@
+#pragma once
+
+#include "seismic_model.h"
+#include <vector>
+#include <string>
+
+class adjoint_kirchhoff {
+public:
+	seismic_model env;
+	std::vector<double> mig;
+
+	adjoint_kirchhoff(seismic_model env);
+	void run(std::vector<double> d);
+	void mig_to_file(std::string filename);
+};
