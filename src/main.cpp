@@ -8,16 +8,16 @@
 
 int main(int, char**){
     seismic_model env = environment_presets::generate_environment(
-        environment_presets::presets::SINGLE_POINT,
+        environment_presets::presets::LAYERS,
         150,
         15,
-        0,
+        0.002,
         10
     );
     std::cout << "Model Generated" << std::endl;
+    plot_util::create_figure(500, 1000);
+    plot_util::subplot(1, 2, 0);
     plot_util::plot_image(env.ref_space);
-    plot_util::create_figure(50, 50);
-    plot_util::show(true);
 
     forward_kirchhoff forward(env);
     forward.run();
@@ -26,8 +26,9 @@ int main(int, char**){
     adjoint_kirchhoff adjoint(env);
     adjoint.run(forward.d);
     std::cout << "Adjoint Run" << std::endl;
+    plot_util::subplot(1, 2, 1);
     plot_util::plot_image(std::vector<float> (adjoint.mig.begin(), adjoint.mig.end()), env.n_xs, env.n_zs);
-    plot_util::show(true);
+    plt::show();
 
     //env.m_to_file("m.csv");
     //forward.d_to_file("d.csv");

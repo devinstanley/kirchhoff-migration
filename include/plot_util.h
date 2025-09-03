@@ -2,10 +2,9 @@
 
 #include <vector>
 #include <string>
-#include "matplotlibcpp.h"
-#include "Python.h"
+#include <matplot/matplot.h>
 
-namespace plt = matplotlibcpp;
+namespace plt = matplot;
 
 class plot_util{
     public:
