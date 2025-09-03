@@ -21,12 +21,15 @@ int main(int, char**){
     };
     std::vector<float> amps{ 1 };
     env.generate_model(coords, amps, noise);
+    std::cout << "Model Generated" << std::endl;
 
     forward_kirchhoff forward(env);
     forward.run();
+    std::cout << "Forward Run" << std::endl;
 
     adjoint_kirchhoff adjoint(env);
     adjoint.run(forward.d);
+    std::cout << "Adjoint Run" << std::endl;
 
     env.m_to_file("m.csv");
     forward.d_to_file("d.csv");
