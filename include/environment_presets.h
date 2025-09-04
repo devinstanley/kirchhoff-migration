@@ -11,5 +11,5 @@ class environment_presets{
             FAULT
         };
 
-        static seismic_model generate_environment(presets preset, int n_ts, int n_xzs, int dt, int dxz, double noise=0, double rf=20, double vel=1000);
+        static seismic_model generate_environment(presets preset, int n_ts, int n_xzs, float dt, float dxz, double noise=0, double rf=20, double vel=2500);
 };

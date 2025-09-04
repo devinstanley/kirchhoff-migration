@@ -1,10 +1,10 @@
 #include "environment_presets.h"
 
-seismic_model environment_presets::generate_environment(environment_presets::presets preset, int n_ts, int n_xzs, int dt, int dxz, double noise, double rf, double vel){
+seismic_model environment_presets::generate_environment(environment_presets::presets preset, int n_ts, int n_xzs, float dt, float dxz, double noise, double rf, double vel){
     std::vector<int> src_cords;
     std::vector<int> rcv_cords;
 
-    for (int ii = 0; ii < n_xzs; ii++){
+    for (int ii = 0; ii <= n_xzs; ii++){
         src_cords.push_back(ii * dxz);
         rcv_cords.push_back(ii * dxz);
     }
@@ -36,7 +36,14 @@ seismic_model environment_presets::generate_environment(environment_presets::pre
         break;
     
     case environment_presets::presets::FAULT:
-        //TODO:: Implement
+        coords.push_back({15, 15});
+        coords.push_back({135, 135});
+        coords.push_back({135, 15});
+        coords.push_back({75, 75});
+        amps.push_back({ 10 });
+        amps.push_back({ 50 });
+        amps.push_back({ 20 });
+        amps.push_back({ 30 });
         break;
 
     default:
