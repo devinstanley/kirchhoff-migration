@@ -11,7 +11,6 @@ void adjoint_kirchhoff::run(std::vector<double> d) {
 	for (int i_src = 0; i_src < env.n_srcs; i_src++) {
 		// Get Source X Pos
 		int src_coord = env.src_coords[i_src];
-		std::cout << src_coord << std::endl;
 
 		for (int i_rcv = 0; i_rcv < env.n_rcvs; i_rcv++) {
 			// Get Receiver X Pos
