@@ -5,31 +5,42 @@
 #include "adjoint_kirchhoff.h"
 #include "environment_presets.h"
 #include "plot_util.h"
+#include <chrono>
 
 int main(int, char**){
     seismic_model env = environment_presets::generate_environment(
         environment_presets::presets::LAYERS,
-        75,
-        60,
-        0.002,
+        100,
+        30,
+        0.009,
         30
     );
-    std::cout << "Model Generated" << std::endl;
+    std::cout << "Model Generated\n";
     plot_util::create_figure(500, 1500);
     plot_util::subplot(1, 3, 0);
     plot_util::plot_image(env.ref_space, "Generated Environment");
 
 
     forward_kirchhoff forward(env);
+    auto start = std::chrono::high_resolution_clock::now();
     forward.run();
-    std::cout << "Forward Run" << std::endl;
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Forward Run: " << elapsed.count() << " seconds\n";
 
     plot_util::subplot(1, 3, 1);
     plot_util::plot_line(forward.L[0], "L");
 
     adjoint_kirchhoff adjoint(env);
+
+    start = std::chrono::high_resolution_clock::now();
     adjoint.run(forward.d);
-    std::cout << "Adjoint Run" << std::endl;
+    end = std::chrono::high_resolution_clock::now();
+
+    elapsed = end - start;
+    std::cout << "Adjoint Run: " << elapsed.count() << " seconds\n";
+
     plot_util::subplot(1, 3, 2);
     plot_util::plot_image(adjoint.mig, env.n_xs, env.n_zs, "Basic Seismic Migration");
     plt::show();
