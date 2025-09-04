@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(seismic-migration VERSION 0.1.0 LANGUAGES C CXX)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Find OpenMP
+find_package(OpenMP REQUIRED)
 # Find Python
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 
@@ -20,17 +25,21 @@ file(GLOB SOURCES "src/*.cpp")
 
 add_executable(seismic-migration ${SOURCES})
 
-include(CTest)
-enable_testing()
-
-set(CPACK_PROJECT_NAME ${PROJECT_NAME})
-set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
-include(CPack)
-
 # Include Directories
 target_include_directories(seismic-migration 
     PRIVATE 
         ${PROJECT_SOURCE_DIR}/include
 )
 
-target_link_libraries(seismic-migration PUBLIC matplot)
+target_link_libraries(seismic-migration PUBLIC matplot OpenMP::OpenMP_CXX)
+
+if(MSVC)
+    target_compile_options(seismic-migration PRIVATE /openmp)
+endif()
+
+include(CTest)
+enable_testing()
+
+set(CPACK_PROJECT_NAME ${PROJECT_NAME})
+set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
+include(CPack)
