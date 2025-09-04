@@ -10,9 +10,9 @@ int main(int, char**){
     seismic_model env = environment_presets::generate_environment(
         environment_presets::presets::LAYERS,
         75,
-        15,
+        60,
         0.002,
-        10
+        30
     );
     std::cout << "Model Generated" << std::endl;
     plot_util::create_figure(500, 1500);
@@ -25,13 +25,13 @@ int main(int, char**){
     std::cout << "Forward Run" << std::endl;
 
     plot_util::subplot(1, 3, 1);
-    //plot_util::plot_image(forward.L, "L");
+    plot_util::plot_line(forward.L[0], "L");
 
     adjoint_kirchhoff adjoint(env);
     adjoint.run(forward.d);
     std::cout << "Adjoint Run" << std::endl;
     plot_util::subplot(1, 3, 2);
-    plot_util::plot_image(std::vector<float> (adjoint.mig.begin(), adjoint.mig.end()), env.n_xs, env.n_zs, "Basic Seismic Migration");
+    plot_util::plot_image(adjoint.mig, env.n_xs, env.n_zs, "Basic Seismic Migration");
     plt::show();
 
     return 0;
