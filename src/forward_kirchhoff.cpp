@@ -1,4 +1,5 @@
 #include "forward_kirchhoff.h"
+#include <omp.h>
 
 #include <fstream>
 #include <iomanip>
@@ -9,20 +10,17 @@ void forward_kirchhoff::run() {
 	d.assign(env.n_srcs*env.n_rcvs*env.n_ts, 0.0);
 	L.assign(env.n_srcs * env.n_rcvs * env.n_ts, std::vector<double>(env.n_zs * env.n_xs, 0.0));
 
-
+	#pragma omp parallel for schedule(static)
 	for (int i_src = 0; i_src < env.n_srcs; i_src++) {
-		// Get Source X Pos
-		int src_coord = env.src_coords[i_src];
-
 		for (int i_rcv = 0; i_rcv < env.n_rcvs; i_rcv++) {
-			// Get Receiver X Pos
-			int rcv_coord = env.rcv_coords[i_rcv];
-
 			for (int ix = 0; ix < env.n_xs; ix++) {
-				//Get Trial X Point
-				float x_coord = ix * env.dx;
-
 				for (int iz = 0; iz < env.n_zs; iz++) {
+					// Get Source X Pos
+					int src_coord = env.src_coords[i_src];
+					// Get Receiver X Pos
+					int rcv_coord = env.rcv_coords[i_rcv];
+					//Get Trial X Point
+					float x_coord = ix * env.dx;
 					//Get Trial Z Point
 					float z_coord = iz * env.dz;
 
