@@ -9,11 +9,11 @@
 
 int main(int, char**){
     seismic_model env = environment_presets::generate_environment(
-        environment_presets::presets::LAYERS,
-        100,
-        30,
-        0.009,
-        30
+        environment_presets::presets::SINGLE_POINT,
+        75, // # of Time Steps
+        60, // # of Spatial Steps
+        0.005, // Time Step (s)
+        2.5 // Spatial Step (m)
     );
     std::cout << "Model Generated\n";
     plot_util::create_figure(500, 1500);
