@@ -3,6 +3,8 @@
 
 #include <fstream>
 #include <iomanip>
+#include <limits>
+#include <cmath>
 
 forward_kirchhoff::forward_kirchhoff(seismic_model env):env(env){};
 
@@ -10,11 +12,16 @@ void forward_kirchhoff::run() {
 	d.assign(env.n_srcs*env.n_rcvs*env.n_ts, 0.0);
 	L.assign(env.n_srcs * env.n_rcvs * env.n_ts, std::vector<double>(env.n_zs * env.n_xs, 0.0));
 
-	#pragma omp parallel for schedule(static)
-	for (int i_src = 0; i_src < env.n_srcs; i_src++) {
-		for (int i_rcv = 0; i_rcv < env.n_rcvs; i_rcv++) {
-			for (int ix = 0; ix < env.n_xs; ix++) {
-				for (int iz = 0; iz < env.n_zs; iz++) {
+	int n_srcs = static_cast<int>(env.n_srcs);
+	int n_rcvs = static_cast<int>(env.n_rcvs);
+	int n_xs = static_cast<int>(env.n_xs);
+	int n_zs = static_cast<int>(env.n_zs);
+
+	#pragma omp parallel for collapse(4) schedule(static)
+	for (int i_src = 0; i_src < n_srcs; i_src++) {
+		for (int i_rcv = 0; i_rcv < n_rcvs; i_rcv++) {
+			for (int ix = 0; ix < n_xs; ix++) {
+				for (int iz = 0; iz < n_zs; iz++) {
 					// Get Source X Pos
 					int src_coord = env.src_coords[i_src];
 					// Get Receiver X Pos
