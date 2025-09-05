@@ -2,12 +2,14 @@
 
 #include <fstream>
 #include <iostream>
+#include <cmath>
 
 adjoint_kirchhoff::adjoint_kirchhoff(seismic_model env) : env(env) {};
 
 void adjoint_kirchhoff::run(std::vector<double> d) {
 	mig.assign(env.n_zs * env.n_xs, 0.0);
 
+	//#pragma omp parallel for schedule(dynamic) collapse(2)
 	for (int i_src = 0; i_src < env.n_srcs; i_src++) {
 		// Get Source X Pos
 		int src_coord = env.src_coords[i_src];
@@ -30,12 +32,12 @@ void adjoint_kirchhoff::run(std::vector<double> d) {
 						//Calculate Travel Times
 						double tau_src = sqrt(pow(z_coord, 2.0) + pow(x_coord - src_coord, 2.0)) / env.vel;
 						double tau_rcv = sqrt(pow(z_coord, 2.0) + pow(x_coord - rcv_coord, 2.0)) / env.vel;
-
 						double tt = (env.dt * it) - tau_src - tau_rcv;
-
 						double w = env.ricker_wavelet(tt);
 						double s = w * d[u];
-						mig[p] = mig[p] + s;
+						
+						//#pragma omp atomic
+						mig[p] += s;
 					}
 				}
 			}
