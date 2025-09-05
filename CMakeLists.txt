@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(seismic-migration VERSION 0.1.0 LANGUAGES C CXX)
 
+set(CMAKE_C_COMPILER "C:/mingw64/bin/gcc.exe" CACHE STRING "" FORCE)
+set(CMAKE_CXX_COMPILER "C:/mingw64/bin/g++.exe" CACHE STRING "" FORCE)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 
 # Find OpenMP
 find_package(OpenMP REQUIRED)
@@ -32,10 +36,6 @@ target_include_directories(seismic-migration
 )
 
 target_link_libraries(seismic-migration PUBLIC matplot OpenMP::OpenMP_CXX)
-
-if(MSVC)
-    target_compile_options(seismic-migration PRIVATE /openmp)
-endif()
 
 include(CTest)
 enable_testing()
