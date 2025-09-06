@@ -34,8 +34,8 @@ void forward_kirchhoff::run() {
 					int p = iz * env.n_xs + ix;
 
 					//Calculate Travel Times
-					float tau_src = sqrt(z_coord*z_coord + (x_coord - src_coord)*(x_coord - src_coord)) / env.vel;
-					float tau_rcv = sqrt(z_coord*z_coord + (x_coord - rcv_coord)*(x_coord - rcv_coord)) / env.vel;
+					float tau_src = sqrtf(z_coord*z_coord + (x_coord - src_coord)*(x_coord - src_coord)) / env.vel;
+					float tau_rcv = sqrtf(z_coord*z_coord + (x_coord - rcv_coord)*(x_coord - rcv_coord)) / env.vel;
 
 					if (std::abs(env.m[p]) > 1e-6 || true){
 						#pragma omp simd
