@@ -10,11 +10,12 @@
 int main(int, char**){
 
     seismic_model env = environment_presets::generate_environment(
-        environment_presets::presets::SINGLE_POINT,
+        environment_presets::presets::LAYERS,
+        10, // # of Sources/Receivers
         100, // # of Time Steps
-        60, // # of Spatial Steps
+        150, // # of Spatial Steps
         0.002, // Time Step (s)
-        2.5, // Spatial Step (m)
+        1, // Spatial Step (m)
         0,
         20,
         1000

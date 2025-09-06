@@ -1,12 +1,24 @@
 #include "environment_presets.h"
 
-seismic_model environment_presets::generate_environment(environment_presets::presets preset, int n_ts, int n_xzs, float dt, float dxz, float noise, float rf, float vel){
+seismic_model environment_presets::generate_environment(environment_presets::presets preset, int n_src_rcv, int n_ts, int n_xzs, float dt, float dxz, float noise, float rf, float vel){
     std::vector<int> src_cords;
     std::vector<int> rcv_cords;
 
-    for (int ii = 0; ii <= n_xzs; ii++){
-        src_cords.push_back(ii * dxz);
-        rcv_cords.push_back(ii * dxz);
+    float total_extent = n_xzs * dxz;
+    
+    // Evenly Space
+    if (n_src_rcv == 1) {
+        // Single At Center
+        src_cords.push_back(total_extent / 2.0f);
+        rcv_cords.push_back(total_extent / 2.0f);
+    } else {
+        // Multiple sources/receivers evenly spaced
+        float spacing = total_extent / (n_src_rcv - 1);
+        for (int ii = 0; ii < n_src_rcv; ii++){
+            int position = ii * spacing;
+            src_cords.push_back(position);
+            rcv_cords.push_back(position);
+        }
     }
 
     seismic_model env(src_cords, rcv_cords, n_ts, n_xzs, n_xzs, dt, dxz, dxz, rf, vel);
