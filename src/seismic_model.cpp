@@ -69,12 +69,6 @@ void seismic_model::generate_model(std::vector<std::vector<float>> points, std::
 		val += (distribution(generator) * noise);
 }
 
-inline float fast_exp(float x) {
-		union { float f; int i; } u;
-		u.i = (int)(12102203 * x + 1064866805);
-		return u.f;
-	}
-
 float seismic_model::ricker_wavelet(float tt) {
 	static const float PI = atan(1.0) * 4;
 	static const float PI_25 = powf(PI, 0.25);
@@ -83,7 +77,7 @@ float seismic_model::ricker_wavelet(float tt) {
 	static const float A = PI_25 / sqrt(2.0 * rf);
 
 	float intermed = PI2 * rf2 * tt * tt;
-	float wavelet = A * (1.0 - 2.0 * intermed) * fast_exp(-intermed);
+	float wavelet = A * (1.0 - 2.0 * intermed) * exp(-intermed);
 	return wavelet;
 }
 
