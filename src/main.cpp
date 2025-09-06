@@ -21,9 +21,9 @@ int main(int, char**){
     );
 
     std::cout << "Model Generated\n";
-    //plot_util::create_figure(500, 1500);
-    //plot_util::subplot(1, 3, 0);
-    //plot_util::plot_image(env.ref_space, "Generated Environment");
+    plot_util::create_figure(500, 1500);
+    plot_util::subplot(1, 3, 0);
+    plot_util::plot_image(env.ref_space, "Generated Environment");
 
 
     forward_kirchhoff forward(env);
@@ -34,8 +34,8 @@ int main(int, char**){
     std::chrono::duration<float> elapsed = end - start;
     std::cout << "Forward Run: " << elapsed.count() << " seconds\n";
 
-    //plot_util::subplot(1, 3, 1);
-    //plot_util::plot_line(forward.L[0], "L");
+    plot_util::subplot(1, 3, 1);
+    plot_util::plot_line(forward.L[0], "L");
 
     adjoint_kirchhoff adjoint(env);
 
@@ -46,9 +46,9 @@ int main(int, char**){
     elapsed = end - start;
     std::cout << "Adjoint Run: " << elapsed.count() << " seconds\n";
 
-    //plot_util::subplot(1, 3, 2);
-    //plot_util::plot_image(adjoint.mig, env.n_xs, env.n_zs, "Basic Seismic Migration");
-    //plt::show();
+    plot_util::subplot(1, 3, 2);
+    plot_util::plot_image(adjoint.mig, env.n_xs, env.n_zs, "Basic Seismic Migration");
+    plt::show();
 
     return 0;
 }
