@@ -20,8 +20,8 @@ void forward_kirchhoff::run() {
 	#pragma omp parallel for collapse(4) schedule(static)
 	for (int i_src = 0; i_src < n_srcs; i_src++) {
 		for (int i_rcv = 0; i_rcv < n_rcvs; i_rcv++) {
-			for (int ix = 0; ix < n_xs; ix++) {
-				for (int iz = 0; iz < n_zs; iz++) {
+			for (int iz = 0; iz < n_zs; iz++) {
+				for (int ix = 0; ix < n_xs; ix++) {
 					// Get Source X Pos
 					int src_coord = env.src_coords[i_src];
 					// Get Receiver X Pos

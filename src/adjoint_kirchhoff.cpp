@@ -9,7 +9,7 @@ adjoint_kirchhoff::adjoint_kirchhoff(seismic_model env) : env(env) {};
 void adjoint_kirchhoff::run(std::vector<float> d) {
 	mig.assign(env.n_zs * env.n_xs, 0.0);
 
-	#pragma omp parallel for schedule(dynamic) collapse(2)
+	#pragma omp parallel for schedule(static) collapse(2)
 	for (int i_src = 0; i_src < env.n_srcs; i_src++) {
 		// Get Source X Pos
 		int src_coord = env.src_coords[i_src];
@@ -20,14 +20,15 @@ void adjoint_kirchhoff::run(std::vector<float> d) {
 			for (int it = 0; it < env.n_ts; it++) {
 
 				int u = i_src * env.n_rcvs * env.n_ts + i_rcv * env.n_ts + it;
-				for (int ix = 0; ix < env.n_xs; ix++) {
-					//Get Trial X Point
-					float x_coord = ix * env.dx;
-					
+				
+				for (int iz = 0; iz < env.n_zs; iz++) {
+					//Get Trial Z Point
+					float z_coord = iz * env.dz;
+
 					#pragma omp simd
-					for (int iz = 0; iz < env.n_zs; iz++) {
-						//Get Trial Z Point
-						float z_coord = iz * env.dz;
+					for (int ix = 0; ix < env.n_xs; ix++) {
+						//Get Trial X Point
+						float x_coord = ix * env.dx;
 						int p = iz * env.n_xs + ix;
 
 						//Calculate Travel Times
