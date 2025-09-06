@@ -9,7 +9,7 @@ adjoint_kirchhoff::adjoint_kirchhoff(seismic_model env) : env(env) {};
 void adjoint_kirchhoff::run(std::vector<float> d) {
 	mig.assign(env.n_zs * env.n_xs, 0.0);
 
-	#pragma omp parallel for schedule(static) collapse(2)
+	#pragma omp parallel for schedule(static) collapse(3)
 	for (int i_src = 0; i_src < env.n_srcs; i_src++) {
 		// Get Source X Pos
 		int src_coord = env.src_coords[i_src];
@@ -32,8 +32,8 @@ void adjoint_kirchhoff::run(std::vector<float> d) {
 						int p = iz * env.n_xs + ix;
 
 						//Calculate Travel Times
-						float tau_src = sqrt(z_coord*z_coord + (x_coord - src_coord)*(x_coord - src_coord)) / env.vel;
-						float tau_rcv = sqrt(z_coord*z_coord + (x_coord - rcv_coord)*(x_coord - rcv_coord)) / env.vel;
+						float tau_src = sqrtf(z_coord*z_coord + (x_coord - src_coord)*(x_coord - src_coord)) / env.vel;
+						float tau_rcv = sqrtf(z_coord*z_coord + (x_coord - rcv_coord)*(x_coord - rcv_coord)) / env.vel;
 						float tt = (env.dt * it) - tau_src - tau_rcv;
 						float w = env.ricker_wavelet(tt);
 						float s = w * d[u];
