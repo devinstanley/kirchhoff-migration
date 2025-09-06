@@ -32,17 +32,17 @@ class seismic_model{
 		int n_ts,
 		int n_xs,
 		int n_zs,
-		double dt,
-		double dx,
-		double dz,
-		double rf,
-		double vel);
+		float dt,
+		float dx,
+		float dz,
+		float rf,
+		float vel);
 
     // Seismic Model Generator
 	void generate_model(std::vector<std::vector<float>> points, std::vector<float> amplitudes, float noise = 0);
 
     // Wavelet Generator
-	double ricker_wavelet(double tt);
+	float ricker_wavelet(float tt);
 
     // IO Utility
 	void m_to_file(const std::string& filename);

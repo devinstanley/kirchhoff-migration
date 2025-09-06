@@ -10,11 +10,11 @@ seismic_model::seismic_model(
 	int n_ts,
 	int n_xs,
 	int n_zs,
-	double dt,
-	double dx,
-	double dz,
-	double rf,
-	double vel):
+	float dt,
+	float dx,
+	float dz,
+	float rf,
+	float vel):
     src_coords(src_coords),
 	rcv_coords(rcv_coords),
 	n_ts(n_ts),
@@ -36,7 +36,7 @@ void seismic_model::generate_model(std::vector<std::vector<float>> points, std::
 	//Setup Random Distribution
 	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 	std::default_random_engine generator(seed);
-	std::normal_distribution<double> distribution(0.0, 1.0);
+	std::normal_distribution<float> distribution(0.0, 1.0);
 
 
 	auto point_to_cord = [this](std::vector<std::vector<float>>& ref_space, std::vector<float> point) {
@@ -69,17 +69,27 @@ void seismic_model::generate_model(std::vector<std::vector<float>> points, std::
 		val += (distribution(generator) * noise);
 }
 
-double seismic_model::ricker_wavelet(double tt) {
-	double PI = atan(1.0) * 4;
-	double A = powf(PI, 0.25) / sqrtf(2.0 * rf);
-	double intermed = pow(PI, 2.0) * pow(rf, 2.0) * pow(tt, 2.0);
-	double wavelet = A * (1.0 - 2.0 * intermed) * exp(-1.0 * intermed);
+inline float fast_exp(float x) {
+		union { float f; int i; } u;
+		u.i = (int)(12102203 * x + 1064866805);
+		return u.f;
+	}
+
+float seismic_model::ricker_wavelet(float tt) {
+	static const float PI = atan(1.0) * 4;
+	static const float PI_25 = powf(PI, 0.25);
+	static const float PI2 = PI * PI;
+	static const float rf2 = rf * rf;
+	static const float A = PI_25 / sqrt(2.0 * rf);
+
+	float intermed = PI2 * rf2 * tt * tt;
+	float wavelet = A * (1.0 - 2.0 * intermed) * fast_exp(-intermed);
 	return wavelet;
 }
 
 void seismic_model::m_to_file(const std::string& filename) {
 	std::ofstream out(filename);
-	out << std::fixed << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::endl;
+	out << std::fixed << std::setprecision(std::numeric_limits<float>::digits10 + 1) << std::endl;
 	if (out.is_open()) {
 		for (int ii = 0; ii < m.size(); ii++) {
 			out << m[ii] << std::endl;
