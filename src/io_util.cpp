@@ -2,8 +2,8 @@
 #include <fstream>
 #include <sstream>
 
-std::vector<double> io_util::import_vector_csv(const std::string& path) {
-    std::vector<double> vec;
+std::vector<float> io_util::import_vector_csv(const std::string& path) {
+    std::vector<float> vec;
     std::string line, cell;
     std::fstream input_file;
 
@@ -22,7 +22,7 @@ std::vector<double> io_util::import_vector_csv(const std::string& path) {
 			continue;
 		}
 
-		// Convert the line to double and add to the column vector
+		// Convert the line to float and add to the column vector
 		vec.push_back(std::stod(line));
 	}
 	input_file.close();
@@ -31,8 +31,8 @@ std::vector<double> io_util::import_vector_csv(const std::string& path) {
 	return vec;
 }
 
-std::vector<std::vector<double>> io_util::import_matrix_csv(const std::string& path){
-    std::vector<std::vector<double>> mat;
+std::vector<std::vector<float>> io_util::import_matrix_csv(const std::string& path){
+    std::vector<std::vector<float>> mat;
 	std::string line;
 	std::fstream input_file;
 
@@ -44,7 +44,7 @@ std::vector<std::vector<double>> io_util::import_matrix_csv(const std::string& p
 		//std::cout << "Line: " << line << std::endl;
 		std::istringstream linestream(line);
 		std::string cell;
-		std::vector<double> row;
+		std::vector<float> row;
 
 		
 		while (std::getline(linestream, cell, ',')) {

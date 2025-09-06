@@ -59,6 +59,7 @@ void plot_util::plot_image(const std::vector<std::vector<T>>& data, const std::s
     }
 
     plt::image(data_double, true);
+    plt::colormap(plt::palette::hot(8));
     plt::colorbar();
     plt::title(label);
 }
@@ -76,8 +77,8 @@ void plot_util::plot_image(const std::vector<T>& data, const int height, const i
             mapped_data[i][j] = static_cast<double>(data[i * width + j]);
         }
     }
-
     plt::image(mapped_data, true);
+    plt::colormap(plt::palette::hot(8));
     plt::colorbar();
     plt::title(label);
 }

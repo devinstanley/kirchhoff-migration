@@ -1,6 +1,6 @@
 #include "environment_presets.h"
 
-seismic_model environment_presets::generate_environment(environment_presets::presets preset, int n_ts, int n_xzs, float dt, float dxz, double noise, double rf, double vel){
+seismic_model environment_presets::generate_environment(environment_presets::presets preset, int n_ts, int n_xzs, float dt, float dxz, float noise, float rf, float vel){
     std::vector<int> src_cords;
     std::vector<int> rcv_cords;
 
