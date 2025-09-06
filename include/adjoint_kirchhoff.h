@@ -7,9 +7,9 @@
 class adjoint_kirchhoff {
 public:
 	seismic_model env;
-	std::vector<double> mig;
+	std::vector<float> mig;
 
 	adjoint_kirchhoff(seismic_model env);
-	void run(std::vector<double> d);
+	void run(std::vector<float> d);
 	void mig_to_file(const std::string& filename);
 };

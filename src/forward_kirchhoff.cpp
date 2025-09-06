@@ -10,7 +10,7 @@ forward_kirchhoff::forward_kirchhoff(seismic_model env):env(env){};
 
 void forward_kirchhoff::run() {
 	d.assign(env.n_srcs*env.n_rcvs*env.n_ts, 0.0);
-	L.assign(env.n_srcs * env.n_rcvs * env.n_ts, std::vector<double>(env.n_zs * env.n_xs, 0.0));
+	L.assign(env.n_srcs * env.n_rcvs * env.n_ts, std::vector<float>(env.n_zs * env.n_xs, 0.0));
 
 	int n_srcs = static_cast<int>(env.n_srcs);
 	int n_rcvs = static_cast<int>(env.n_rcvs);
@@ -34,16 +34,16 @@ void forward_kirchhoff::run() {
 					int p = iz * env.n_xs + ix;
 
 					//Calculate Travel Times
-					double tau_src = sqrt(pow(z_coord, 2.0) + pow(x_coord - src_coord, 2.0)) / env.vel;
-					double tau_rcv = sqrt(pow(z_coord, 2.0) + pow(x_coord - rcv_coord, 2.0)) / env.vel;
+					float tau_src = sqrt(z_coord*z_coord + (x_coord - src_coord)*(x_coord - src_coord)) / env.vel;
+					float tau_rcv = sqrt(z_coord*z_coord + (x_coord - rcv_coord)*(x_coord - rcv_coord)) / env.vel;
 
 					if (std::abs(env.m[p]) > 1e-6 || true){
-
+						#pragma omp simd
 						for (int it = 0; it < env.n_ts; it++) {
 							int u = i_src * env.n_rcvs * env.n_ts + i_rcv * env.n_ts + it;
-							double tt = (env.dt * it) - tau_src - tau_rcv;
-							double w = env.ricker_wavelet(tt);
-							double s = w * env.m[p];
+							float tt = (env.dt * it) - tau_src - tau_rcv;
+							float w = env.ricker_wavelet(tt);
+							float s = w * env.m[p];
 							d[u] = (d[u] + s);
 							L[u][p] = w;
 						}
@@ -57,7 +57,7 @@ void forward_kirchhoff::run() {
 void forward_kirchhoff::d_to_file(const std::string& path) {
 
 	std::ofstream out(path);
-	out << std::fixed << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::endl;
+	out << std::fixed << std::setprecision(std::numeric_limits<float>::digits10 + 1) << std::endl;
 	if (out.is_open()) {
 		for (int ii = 0; ii < d.size(); ii++) {
 			out << d[ii] << std::endl;
@@ -70,9 +70,9 @@ void forward_kirchhoff::L_to_file(const std::string& path) {
 	
 	std::ofstream out(path);
 	if (out.is_open()) {
-		out << std::fixed << std::setprecision(std::numeric_limits<double>::digits10 + 1) << std::endl;
-		for (std::vector<double> row: L) {
-			for (double val : row) {
+		out << std::fixed << std::setprecision(std::numeric_limits<float>::digits10 + 1) << std::endl;
+		for (std::vector<float> row: L) {
+			for (float val : row) {
 				out << val << ", ";
 			}
 			out << std::endl;

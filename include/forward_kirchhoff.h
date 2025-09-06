@@ -5,8 +5,8 @@
 class forward_kirchhoff{
     public:
         seismic_model env;
-        std::vector<double> d;
-        std::vector<std::vector<double>> L;
+        std::vector<float> d;
+        std::vector<std::vector<float>> L;
 
         forward_kirchhoff(seismic_model env);
 
