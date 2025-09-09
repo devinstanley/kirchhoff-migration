@@ -4,7 +4,7 @@
 #include <iostream>
 #include <cmath>
 
-adjoint_kirchhoff::adjoint_kirchhoff(seismic_model env) : env(env) {};
+adjoint_kirchhoff::adjoint_kirchhoff(seismic_model& env) : env(env) {};
 
 void adjoint_kirchhoff::run(std::vector<float> d) {
 	mig.assign(env.n_zs * env.n_xs, 0.0);

@@ -6,7 +6,7 @@
 #include <limits>
 #include <cmath>
 
-forward_kirchhoff::forward_kirchhoff(seismic_model env):env(env){};
+forward_kirchhoff::forward_kirchhoff(seismic_model& env):env(env){};
 
 void forward_kirchhoff::run() {
 	d.assign(env.n_srcs*env.n_rcvs*env.n_ts, 0.0);
