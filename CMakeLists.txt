@@ -25,7 +25,7 @@ if(NOT matplotplusplus_POPULATED)
     add_subdirectory(${matplotplusplus_SOURCE_DIR} ${matplotplusplus_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
-file(GLOB SOURCES "src/*.cpp")
+file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(seismic-migration ${SOURCES})
 
@@ -33,6 +33,7 @@ add_executable(seismic-migration ${SOURCES})
 target_include_directories(seismic-migration 
     PRIVATE 
         ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/include/optimization
 )
 
 target_link_libraries(seismic-migration PUBLIC matplot OpenMP::OpenMP_CXX)
