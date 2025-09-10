@@ -15,10 +15,17 @@ least_squares_migration::least_squares_migration(seismic_model& env):
         throw std::invalid_argument("Invalid model dimensions!");
     }
 
+    // Initialize LSM Storage
     model.assign(model_size, 0.0f);
     gradient.assign(model_size, 0.0f);
     residual.assign(data_size, 0.0f);
     predicted_data.assign(data_size, 0.0f);
+
+    // Initialize Step Size Storage
+    prev_model.assign(model_size, 0.0f);
+    prev_gradient.assign(model_size, 0.0f);
+    model_step.assign(model_size, 0.0f);
+    gradient_step.assign(model_size, 0.0f);
 };
 
 void least_squares_migration::run(const std::vector<float>& data, optimizers optimizer, int max_iterations, float tol, int verbosity){
@@ -55,14 +62,29 @@ void least_squares_migration::run_simple_gradient(int max_iterations, float tol,
     float alpha = DEFAULT_STEP_SIZE;
     float prev_misfit = std::numeric_limits<float>::max();
 
+    // Compute Initial Gradient
+    compute_gradient();
+
     for (int iter = 0; iter < max_iterations; iter++){
-        // Compute and Store Gradient in Vector
-        compute_gradient();
+        // Store Previous Models for BB Step
+        prev_model = model;
+        prev_gradient = gradient;
 
         // Update Model
         #pragma omp parallel for
         for (size_t i = 0; i < model.size(); i++) {
             model[i] -= alpha * gradient[i];
+        }
+
+        // Compute and Store Gradient in Vector
+        compute_gradient();
+
+        // Compute BB Step
+        if (iter != 0){
+            alpha = compute_bb_step_size();
+            if (verbosity > 1 || (verbosity > 0 && iter % 10 == 0)){
+                std::cout << "\tBB step size: " << alpha << std::endl;
+            }
         }
 
         // Compute Misfit
@@ -89,6 +111,53 @@ void least_squares_migration::run_simple_gradient(int max_iterations, float tol,
 
         prev_misfit = current_misfit;
     }
+}
+
+float least_squares_migration::compute_bb_step_size(){
+    // Compute Model Step
+    for (size_t i = 0; i < model_step.size(); i++) {
+        model_step[i] = model[i] - prev_model[i];
+    }
+
+    // Compute Gradient Step
+    for (size_t i = 0; i < gradient_step.size(); i++) {
+        gradient_step[i] = gradient[i] - prev_gradient[i];
+    }
+
+    // Compute BB Step Sizes
+    float s_dot_y = dot_product(model_step, gradient_step);
+    float s_dot_s = dot_product(model_step, model_step);
+    float y_dot_y = dot_product(gradient_step, gradient_step);
+
+    float alpha_bb1, alpha_bb2, alpha;
+    
+    // BB1: alpha = s^T s / s^T y
+    if (std::abs(s_dot_y) > 1e-15f) {
+        alpha_bb1 = s_dot_s / s_dot_y;
+    } else {
+        alpha_bb1 = DEFAULT_STEP_SIZE;
+    }
+    
+    // BB2: alpha = s^T y / y^T y  
+    if (y_dot_y > 1e-15f) {
+        alpha_bb2 = s_dot_y / y_dot_y;
+    } else {
+        alpha_bb2 = DEFAULT_STEP_SIZE;
+    }
+    
+    // Choose BB1 or BB2 if reasonable
+    if (alpha_bb2 > 0 && alpha_bb2 < 1e6 * DEFAULT_STEP_SIZE) {
+        alpha = alpha_bb2;
+    } else if (alpha_bb1 > 0 && alpha_bb1 < 1e6 * DEFAULT_STEP_SIZE) {
+        alpha = alpha_bb1;
+    } else {
+        alpha = DEFAULT_STEP_SIZE;
+    }
+    
+    // Safeguard
+    alpha = std::max(MIN_STEP_SIZE, std::min(alpha, MAX_STEP_SIZE));
+    
+    return alpha;
 }
 
 void least_squares_migration::run_conjugate_gradient(int max_iterations, float tol, int verbosity){
