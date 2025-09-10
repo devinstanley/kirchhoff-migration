@@ -11,6 +11,10 @@ least_squares_migration::least_squares_migration(seismic_model& env):
     int model_size = env.n_zs * env.n_xs;
     int data_size = env.n_srcs * env.n_rcvs * env.n_ts;
 
+    if (model_size <= 0 || data_size <= 0){
+        throw std::invalid_argument("Invalid model dimensions!");
+    }
+
     model.assign(model_size, 0.0f);
     gradient.assign(model_size, 0.0f);
     residual.assign(data_size, 0.0f);
@@ -18,9 +22,21 @@ least_squares_migration::least_squares_migration(seismic_model& env):
 };
 
 void least_squares_migration::run(const std::vector<float>& data, optimizers optimizer, int max_iterations, float tol, int verbosity){
-    this->data_ptr = &data;
+    // Input Validation
+    if (data.empty()) {
+        throw std::invalid_argument("Input data is empty!");
+    }
+    
+    int expected_data_size = env.n_srcs * env.n_rcvs * env.n_ts;
+    if (data.size() != expected_data_size) {
+        throw std::invalid_argument("Input data does not match expected model size!");
+    }
+    
+    if (max_iterations <= 0) {
+        throw std::invalid_argument("Max iterations must be positive!");
+    }
 
-    model.assign(env.n_zs * env.n_xs, 0.0);
+    this->data_ptr = &data;
 
     switch (optimizer){
         case optimizers::SIMPLE_GRADIENT:
@@ -36,12 +52,8 @@ void least_squares_migration::run(const std::vector<float>& data, optimizers opt
 }
 
 void least_squares_migration::run_simple_gradient(int max_iterations, float tol, int verbosity){
-    float alpha = 1e-6f;
+    float alpha = DEFAULT_STEP_SIZE;
     float prev_misfit = std::numeric_limits<float>::max();
-
-    // Set Initial Guess - Simple Forward Adjoint
-    //adj.run(*data_ptr);
-    //model = adj.mig;
 
     for (int iter = 0; iter < max_iterations; iter++){
         // Compute and Store Gradient in Vector
@@ -60,7 +72,7 @@ void least_squares_migration::run_simple_gradient(int max_iterations, float tol,
         if (verbosity > 1 || (verbosity > 0 && iter % 10 == 0)){
             std::cout << "Iteration " << iter << ": Misfit = " << current_misfit 
                 << ", Reduction = " << misfit_reduction << std::endl;
-            std::cout << "\tCurrent model sum: " << std::accumulate(model.begin(), model.end(), 0.0f) << std::endl;
+            std::cout << "\tCurrent model sum: " << std::accumulate(predicted_data.begin(), predicted_data.end(), 0.0f) << std::endl;
 
             float pred_sum = std::accumulate(fwd.d.begin(), fwd.d.end(), 0.0f);
             std::cout << "\tPredicted data sum: " << pred_sum << std::endl;
@@ -80,7 +92,7 @@ void least_squares_migration::run_simple_gradient(int max_iterations, float tol,
 }
 
 void least_squares_migration::run_conjugate_gradient(int max_iterations, float tol, int verbosity){
-    float alpha = 1e-6f;
+    float alpha = DEFAULT_STEP_SIZE;
     float prev_misfit = std::numeric_limits<float>::max();
     float beta, r_norm, r_prev_norm;
 
@@ -179,6 +191,7 @@ void least_squares_migration::compute_residual(){
 
 float least_squares_migration::compute_misfit() {
     float misfit = 0.0f;
+    compute_residual();
     
     #pragma omp parallel for reduction(+:misfit)
     for (size_t i = 0; i < residual.size(); i++) {
@@ -190,6 +203,9 @@ float least_squares_migration::compute_misfit() {
 
 float least_squares_migration::dot_product(const std::vector<float>& a, 
                                           const std::vector<float>& b) {
+    if (a.size() != b.size()) {
+        throw std::invalid_argument("Vector size mismatch!");
+    }
     float result = 0.0;
     #pragma omp parallel for reduction(+:result)
     for (size_t i = 0; i < a.size(); i++) {

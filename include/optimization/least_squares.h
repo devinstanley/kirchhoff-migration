@@ -14,7 +14,7 @@ class least_squares_migration{
         };
         least_squares_migration(seismic_model& env);
 
-        void run(const std::vector<float>& data, optimizers optimizer = optimizers::CONJUGATE_GRADIENT, int max_iterations = 2500, float tol = 1e-6, int verbosity = 1);
+        void run(const std::vector<float>& data, optimizers optimizer = optimizers::CONJUGATE_GRADIENT, int max_iterations = 50, float tol = 1e-6, int verbosity = 1);
 
         const std::vector<float>& get_model() const { return model; }
         float get_final_misfit() const { return final_misfit; }
@@ -31,6 +31,9 @@ class least_squares_migration{
         std::vector<float> predicted_data;
 
         float final_misfit;
+
+        const float DEFAULT_STEP_SIZE = 1e-6f;
+        const float BETA_ZERO_THRESHOLD = 1e-15f;
 
         void compute_gradient();
         void compute_residual();
