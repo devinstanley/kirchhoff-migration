@@ -10,6 +10,7 @@
 
 int main(int, char**){
 
+    bool do_plot = false;
     seismic_model env = environment_presets::generate_environment(
         environment_presets::presets::LAYERS,
         10, // # of Sources/Receivers
@@ -23,9 +24,11 @@ int main(int, char**){
     );
 
     std::cout << "Model Generated\n";
-    plot_util::create_figure(400, 1900);
-    plot_util::subplot(1, 4, 0);
-    plot_util::plot_image(env.ref_space, "Generated Environment");
+    if (do_plot){
+        plot_util::create_figure(400, 1900);
+        plot_util::subplot(1, 4, 0);
+        plot_util::plot_image(env.ref_space, "Generated Environment");
+    }
 
     // Generate Synth Data
     forward_kirchhoff forward(env);
@@ -38,9 +41,10 @@ int main(int, char**){
     std::cout << "Forward Run: " << elapsed.count() << " seconds\n";
 
     // Plot
-    plot_util::subplot(1, 4, 1);
-    plot_util::plot_line(forward.L[0], "L");
-
+    if (do_plot){
+        plot_util::subplot(1, 4, 1);
+        plot_util::plot_line(forward.L[0], "L");
+    }
 
     // Standard Mig
     adjoint_kirchhoff adjoint(env);
@@ -54,8 +58,10 @@ int main(int, char**){
     std::cout << "Adjoint Run: " << elapsed.count() << " seconds\n";
 
     // Plot Standard
-    plot_util::subplot(1, 4, 2);
-    plot_util::plot_image(adjoint.mig, env.n_xs, env.n_zs, "Basic Seismic Migration");
+    if (do_plot){
+        plot_util::subplot(1, 4, 2);
+        plot_util::plot_image(adjoint.mig, env.n_xs, env.n_zs, "Basic Seismic Migration");
+    }
 
 
     // LSM
@@ -69,9 +75,11 @@ int main(int, char**){
     std::cout << "LSM Run: " << elapsed.count() << " seconds\n";
 
     // Plot Standard
-    plot_util::subplot(1, 4, 3);
-    plot_util::plot_image(lsm.get_model(), env.n_xs, env.n_zs, "Least Squares Migration");
-    plt::show();
+    if (do_plot){
+        plot_util::subplot(1, 4, 3);
+        plot_util::plot_image(lsm.get_model(), env.n_xs, env.n_zs, "Least Squares Migration");
+        plt::show();
+    }
 
     return 0;
 }
