@@ -161,7 +161,7 @@ float least_squares_migration::compute_bb_step_size(){
 }
 
 void least_squares_migration::run_conjugate_gradient(int max_iterations, float tol, int verbosity){
-    float alpha = DEFAULT_STEP_SIZE;
+    float alpha;
     float prev_misfit = std::numeric_limits<float>::max();
     float beta, r_norm, r_prev_norm;
 
@@ -177,7 +177,14 @@ void least_squares_migration::run_conjugate_gradient(int max_iterations, float t
 
     for (int iter = 0; iter < max_iterations; iter++) {
         // Store Previous Gradient
-        std::vector<float> prev_gradient = gradient;
+        prev_gradient = gradient;
+
+        // Line Search for Optimal Step Size
+        alpha = armijo_line_search(conj_dir, 1e-6f);
+
+        if (verbosity > 1 || (verbosity > 0 && iter % 10 == 0)) {
+            std::cout << "\tLine search step size: " << alpha << std::endl;
+        }
 
         // Update Model
         #pragma omp parallel for
@@ -223,6 +230,55 @@ void least_squares_migration::run_conjugate_gradient(int max_iterations, float t
 
         prev_misfit = current_misfit;
     }
+}
+
+float least_squares_migration::armijo_line_search(const std::vector<float>& direction, float initial_step) {
+    float current_misfit = compute_misfit();
+    float directional_derivative = dot_product(gradient, direction);
+    
+    // Direction Not in Descent, Return Min Step
+    if (directional_derivative >= 0) {
+        return MIN_STEP_SIZE;
+    }
+    
+    float step = initial_step;
+    
+    for (int i = 0; i < MAX_LINE_SEARCH_ITER; i++) {
+        float new_misfit = evaluate_objective_at_step(direction, step);
+        
+        // Armijo condition: f(x + alpha*d) <= f(x) + c1*alpha*g^T*d
+        if (new_misfit <= current_misfit + ARMIJO_C1 * step * directional_derivative) {
+            return step;
+        }
+        
+        step *= BACKTRACK_FACTOR;
+        
+        // If step becomes too small, return it
+        if (step < MIN_STEP_SIZE) {
+            return MIN_STEP_SIZE;
+        }
+    }
+    
+    return step;
+}
+
+float least_squares_migration::evaluate_objective_at_step(const std::vector<float>& direction, float step_size) {
+    // Save Current Model
+    std::vector<float> original_model = model;
+    
+    // Take Step
+    #pragma omp parallel for
+    for (size_t i = 0; i < model.size(); i++) {
+        model[i] += step_size * direction[i];
+    }
+    
+    // Evaluate Misfit
+    float objective = compute_misfit();
+    
+    // Restore Original
+    model = original_model;
+    
+    return objective;
 }
 
 void least_squares_migration::compute_gradient(){
