@@ -325,11 +325,15 @@ bool spgl1_bpdn::dirn_line_search() {
     dx = linalg::vector_subtract(linalg::l1_norm_projection(linalg::vector_subtract(x, linalg::scalar_vector_prod(g_step, g)), tau), x);
     stop = std::chrono::high_resolution_clock::now();
     iter_info.proj_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-    gtd = -1.0 * abs(linalg::dot(g, dx));
+    
+    gtd = linalg::dot(g, dx);
+    if (gtd >= 0) {  // Not a Descent Direction
+        return true;
+    }
 
     // Line Search Start
     while (1) {
-        x = linalg::vector_subtract(x, linalg::scalar_vector_prod(step, dx));
+        x = linalg::vector_subtract(xold, linalg::scalar_vector_prod(step, dx));
 
         start = std::chrono::high_resolution_clock::now();
         linalg::matvec(A_flat, x, rows, cols, matvec_result);
@@ -351,11 +355,16 @@ bool spgl1_bpdn::dirn_line_search() {
             step /= 2;
         }
         else {
-            tmp = (-1 * gtd * pow(step, 2)) / (2 * (f - fold - step * gtd));
-            if (tmp < 0.1 or tmp > 0.9 * step) {
-                tmp = step / 2;
+            float denominator = 2 * (f - fold - step * gtd);
+            if (std::abs(denominator) > 1e-10) {  // Avoid division by zero
+                tmp = (-gtd * step * step) / denominator;
+                if (tmp < 0.1 || tmp > 0.9 * step || !std::isfinite(tmp)) {
+                    tmp = step / 2;
+                }
+                step = tmp;
+            } else {
+                step /= 2;
             }
-            step = tmp;
         }
 
         n_iters += 1;
