@@ -126,3 +126,15 @@ float linalg::dot(const std::vector<float>& vec1, const std::vector<float>& vec2
 	}
 	return prod_sum;
 }
+
+void linalg::matvec(std::vector<float> const& mat, std::vector<float> const& vec, int m, int n, std::vector<float>& res) {
+
+	#pragma omp parallel for
+	for (int i = 0; i < m; ++i) {
+		float temp = 0;
+		for (int j = 0; j < n; ++j) {
+			temp += mat[i * n + j] * vec[j];
+		}
+		res[i] = temp;
+	}
+}
