@@ -7,12 +7,13 @@
 #include "plot_util.h"
 #include "least_squares.h"
 #include <chrono>
+#include <spgl1_bpdn.h>
 
 int main(int, char**){
 
     bool do_plot = true;
     seismic_model env = environment_presets::generate_environment(
-        environment_presets::presets::LAYERS,
+        environment_presets::presets::SINGLE_POINT,
         10, // # of Sources/Receivers
         100, // # of Time Steps
         75, // # of Spatial Steps
@@ -56,17 +57,27 @@ int main(int, char**){
     elapsed = end - start;
     std::cout << "LSM Run: " << elapsed.count() << " seconds\n";
 
+    // SPGL1
+    spgl1_bpdn spgl1(forward.L, forward.d, 0.00001f);
+    start = std::chrono::high_resolution_clock::now();
+    spgl1.run(150);
+    end = std::chrono::high_resolution_clock::now();
+
+    // Print Time
+    elapsed = end - start;
+    std::cout << "SPGL1 Run: " << elapsed.count() << " seconds\n";
+
     // Plot Everything
     if (do_plot){
         plot_util::create_figure(400, 1900);
         plot_util::subplot(1, 4, 0);
         plot_util::plot_image(env.ref_space, "Generated Environment");
         plot_util::subplot(1, 4, 1);
-        plot_util::plot_line(forward.L[0], "L");
+        //plot_util::plot_image(adjoint.mig, env.n_xs, env.n_zs, "Basic Seismic Migration");
         plot_util::subplot(1, 4, 2);
-        plot_util::plot_image(adjoint.mig, env.n_xs, env.n_zs, "Basic Seismic Migration");
+        //plot_util::plot_image(lsm.get_model(), env.n_xs, env.n_zs, "Least Squares Migration");
         plot_util::subplot(1, 4, 3);
-        plot_util::plot_image(lsm.get_model(), env.n_xs, env.n_zs, "Least Squares Migration");
+        plot_util::plot_image(spgl1.x_out, env.n_xs, env.n_zs, "SPGL1 Migration");
         plt::show();
     }
 
