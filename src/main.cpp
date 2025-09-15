@@ -14,7 +14,7 @@ int main(int, char**){
     bool do_plot = true;
     seismic_model env = environment_presets::generate_environment(
         environment_presets::presets::LAYERS,
-        10, // # of Sources/Receivers
+        25, // # of Sources/Receivers
         100, // # of Time Steps
         75, // # of Spatial Steps
         0.002, // Time Step (s)
@@ -48,9 +48,9 @@ int main(int, char**){
 
 
     // LSM
-    least_squares_migration lsm(env);
+    least_squares_migration lsm(forward.L, forward.d);
     start = std::chrono::high_resolution_clock::now();
-    lsm.run(forward.d);
+    lsm.run();
     end = std::chrono::high_resolution_clock::now();
 
     // Print Time
