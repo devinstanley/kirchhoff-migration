@@ -78,63 +78,91 @@ std::vector<float> linalg::l1_norm_projection(std::vector<float> vec, float tau)
 	return proj;
 }
 float linalg::l1_norm(const std::vector<float>& vec){
-    float norm = 0;
-	for (float value : vec) {
-		norm += abs(value);
-	}
-	return norm;
+	const float* __restrict__ x = vec.data();
+    float norm = 0.0f;
+	
+	#pragma omp simd reduction(+:norm)
+    for (int i = 0; i < (int)vec.size(); ++i) {
+        norm += std::fabs(x[i]);  // use fabsf for float
+    }
+    return norm;
 }
 float linalg::l2_norm(const std::vector<float>& vec){
-    float norm = 0;
-	for (float value : vec) {
-		norm += value * value;
-	}
-	return sqrt(norm);
+    const float* __restrict__ x = vec.data();
+    float norm = 0.0f;
+
+    #pragma omp simd reduction(+:norm)
+    for (int i = 0; i < (int)vec.size(); ++i) {
+        norm += x[i] * x[i];
+    }
+    return std::sqrt(norm);
 }
 float linalg::inf_norm(const std::vector<float>& vec){
-    float max = 0;
-	for (float value : vec) {
-		if (abs(value) > max) {
-			max = abs(value);
-		}
-	}
-	return max;
+    const float* __restrict__ x = vec.data();
+    float maxv = 0.0f;
+
+    #pragma omp simd reduction(max:maxv)
+    for (int i = 0; i < (int)vec.size(); ++i) {
+        float v = std::fabs(x[i]);
+        if (v > maxv) maxv = v;
+    }
+    return maxv;
 }
 
 std::vector<float> linalg::scalar_vector_prod(const float& scalar, const std::vector<float>& vec){
-    int n = vec.size();
-	std::vector<float> prod(n, 0.0);
+    int n = (int)vec.size();
+    std::vector<float> prod(n);
+    const float* __restrict__ x = vec.data();
+    float* __restrict__ y = prod.data();
 
-	for (int i = 0; i < n; i++) {
-		prod[i] = scalar * vec[i];
-	}
-	return prod;
+    #pragma omp simd
+    for (int i = 0; i < n; ++i) {
+        y[i] = scalar * x[i];
+    }
+    return prod;
 }
 std::vector<float> linalg::vector_subtract(const std::vector<float>& vec1, const std::vector<float>& vec2){
-    int n = vec1.size();
-	std::vector<float> sub(n, 0.0);
+    int n = (int)vec1.size();
+    std::vector<float> sub(n);
+    const float* __restrict__ x1 = vec1.data();
+    const float* __restrict__ x2 = vec2.data();
+    float* __restrict__ y = sub.data();
 
-	for (int i = 0; i < n; i++) {
-		sub[i] = vec1[i] - vec2[i];
-	}
-	return sub;
+    #pragma omp simd
+    for (int i = 0; i < n; ++i) {
+        y[i] = x1[i] - x2[i];
+    }
+    return sub;
 }
 float linalg::dot(const std::vector<float>& vec1, const std::vector<float>& vec2){
-    float prod_sum = 0;
-	for (int i = 0; i < vec1.size(); i++) {
-		prod_sum += vec1[i] * vec2[i];
-	}
-	return prod_sum;
+    const float* __restrict__ x1 = vec1.data();
+    const float* __restrict__ x2 = vec2.data();
+    float sum = 0.0f;
+
+    #pragma omp simd reduction(+:sum)
+    for (int i = 0; i < (int)vec1.size(); ++i) {
+        sum += x1[i] * x2[i];
+    }
+    return sum;
 }
 
-void linalg::matvec(std::vector<float> const& mat, std::vector<float> const& vec, int m, int n, std::vector<float>& res) {
+void linalg::matvec(const std::vector<float>& mat,
+                    const std::vector<float>& vec,
+                    int m, int n,
+                    std::vector<float>& res) {
+    const float* __restrict__ A = mat.data();
+    const float* __restrict__ x = vec.data();
+    float* __restrict__ y = res.data();
 
-	#pragma omp parallel for
-	for (int i = 0; i < m; ++i) {
-		float temp = 0;
-		for (int j = 0; j < n; ++j) {
-			temp += mat[i * n + j] * vec[j];
-		}
-		res[i] = temp;
-	}
+    #pragma omp parallel for
+    for (int i = 0; i < m; ++i) {
+        float temp = 0.0f;
+        const float* row = A + i * n;
+
+        #pragma omp simd reduction(+:temp)
+        for (int j = 0; j < n; ++j) {
+            temp += row[j] * x[j];
+        }
+        y[i] = temp;
+    }
 }
