@@ -181,6 +181,10 @@ bool spgl1_bpdn::check_exit_conditions() {
         std::cout << "Exit Least Squares" << std::endl;
         return true;
     }
+    if (args.max_step < 1e-12){
+        std::cout << "Step Size Collapsed" << std::endl;
+        return true;
+    }
     if (rgap <= std::max(args.opt_tol, rerror2) or rerror1 <= args.opt_tol) {
         if (rnorm <= sigma) {
             std::cout << "Suboptimal BP Sol" << std::endl;
