@@ -5,30 +5,53 @@
 #include "seismic_model.h"
 #include "forward_kirchhoff.h"
 #include "adjoint_kirchhoff.h"
+#include <chrono>
+
+enum class optimizers {
+    SIMPLE_GRADIENT,
+    CONJUGATE_GRADIENT
+};
+
+struct lsm_info {
+    int n_iter = 0;
+    int n_matvec = 0;
+    int n_rmatvec = 0;
+    float matvec_time = 0;
+    float rmatvec_time = 0;
+};
 
 class least_squares_migration{
     public:
-        enum class optimizers{
-            SIMPLE_GRADIENT,
-            CONJUGATE_GRADIENT
-        };
-        least_squares_migration(seismic_model& env);
+        least_squares_migration(std::vector<std::vector<float>>& L, std::vector<float>& d);
 
-        void run(const std::vector<float>& data, optimizers optimizer = optimizers::CONJUGATE_GRADIENT, int max_iterations = 50, float tol = 1e-6, int verbosity = 2);
+        void run(optimizers optimizer = optimizers::CONJUGATE_GRADIENT, int max_iterations = 50, float tol = 1e-6, int verbosity = 2);
 
         const std::vector<float>& get_model() const { return model; }
         float get_final_misfit() const { return final_misfit; }
 
     private:
-        seismic_model& env;
-        forward_kirchhoff fwd;
-        adjoint_kirchhoff adj;
+        // Problem matrices and data
+        std::vector<std::vector<float>>& L;  // Forward operator matrix
+        std::vector<float>& d;               // Observed data
+        std::vector<std::vector<float>> Lt;  // Transposed operator (adjoint)
+        std::vector<float> L_flat;           // Flattened L for efficient matvec
+        std::vector<float> Lt_flat;          // Flattened Lt for efficient rmatvec
         
-        const std::vector<float>* data_ptr;
+        int model_size;
+        int data_size;
+        int rows, cols;
+
+        // Iteration info
+        lsm_info iter_info;
+        std::chrono::high_resolution_clock::time_point start, stop;
+        
+        // Storage vectors
         std::vector<float> model;
         std::vector<float> gradient;
         std::vector<float> residual;
         std::vector<float> predicted_data;
+        std::vector<float> matvec_result;
+        std::vector<float> rmatvec_result;
 
         // Storage for BB Steps (SG) and Line Search (CG)
         std::vector<float> prev_model;
@@ -62,4 +85,5 @@ class least_squares_migration{
 
         void run_simple_gradient(int max_iterations, float tol, int verbosity);
         void run_conjugate_gradient(int max_iterations, float tol, int verbosity);
+        void precompute_operators();
 };
