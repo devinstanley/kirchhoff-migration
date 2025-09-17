@@ -14,11 +14,11 @@ int main(int, char**){
     bool do_plot = true;
     seismic_model env = environment_presets::generate_environment(
         environment_presets::presets::LAYERS,
-        25, // # of Sources/Receivers
+        26, // # of Sources/Receivers
         100, // # of Time Steps
-        75, // # of Spatial Steps
+        50, // # of Spatial Steps
         0.002, // Time Step (s)
-        2, // Spatial Step (m)
+        3, // Spatial Step (m)
         0,
         20,
         1000
@@ -69,15 +69,16 @@ int main(int, char**){
 
     // Plot Everything
     if (do_plot){
-        plot_util::create_figure(400, 1900);
-        plot_util::subplot(1, 4, 0);
+        plot_util::create_figure(1080, 1920);
+        plot_util::subplot(2, 2, 0);
         plot_util::plot_image(env.ref_space, "Generated Environment");
-        plot_util::subplot(1, 4, 1);
+        plot_util::subplot(2, 2, 1);
         plot_util::plot_image(adjoint.mig, env.n_xs, env.n_zs, "Basic Seismic Migration");
-        plot_util::subplot(1, 4, 2);
+        plot_util::subplot(2, 2, 2);
         plot_util::plot_image(lsm.get_model(), env.n_xs, env.n_zs, "Least Squares Migration");
-        plot_util::subplot(1, 4, 3);
+        plot_util::subplot(2, 2, 3);
         plot_util::plot_image(spgl1.x_out, env.n_xs, env.n_zs, "SPGL1 Migration");
+        plt::save("../ex/Seismic_Layers.png");
         plt::show();
     }
 
