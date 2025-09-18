@@ -17,12 +17,6 @@ using norm_func = std::function<float(const std::vector<float>&)>;
 using dot_func = std::function<float(const std::vector<float>&, const std::vector<float>&)>;
 using projection_func = std::function<std::vector<float>(const std::vector<float>&, float)>;
 
-class linalg_dispatch{
-    public:
-        static linalg_ops get_ops(linalg_backends backend);
-        static bool is_available(linalg_backends backend);
-};
-
 struct linalg_ops {
     matvec_func matvec;
     matvec_func rmatvec;
@@ -38,4 +32,10 @@ struct linalg_ops {
     projection_func l1_norm_projection;
     
     std::string backend_name;
+};
+
+class linalg_dispatch{
+    public:
+        static linalg_ops get_ops(linalg_backends backend);
+        static bool is_available(linalg_backends backend);
 };
