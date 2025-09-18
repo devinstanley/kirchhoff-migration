@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <chrono>
+#include <linalg/linalg_dispatch.h>
 
 // Optional Input Parameters
 struct params {
@@ -33,6 +34,9 @@ class spgl1_bpdn{
         std::vector<std::vector<float>>& A;
         std::vector<float>& b;
         float sigma;
+
+        // Linalg Backend
+        linalg_ops ops;
 
         // Timer Items
         std::chrono::time_point<std::chrono::high_resolution_clock> start;
@@ -101,7 +105,7 @@ class spgl1_bpdn{
         std::vector<float> s;
         std::vector<float> b_search;
 
-        spgl1_bpdn(std::vector<std::vector<float>>& A, std::vector<float>& b, float sigma, const params args = params());
+        spgl1_bpdn(std::vector<std::vector<float>>& A, std::vector<float>& b, float sigma, const params args = params(), linalg_backends backend = linalg_backends::CPU);
         void run(int max_iter = 100);
         void update_iterates();
         void update_tau();
