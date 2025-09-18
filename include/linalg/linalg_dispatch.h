@@ -1,0 +1,41 @@
+#pragma once
+
+#include <vector>
+#include <functional>
+#include <string>
+
+enum class linalg_backends{
+    CPU,
+    OPENMP
+};
+
+// Function pointer types for all linalg operations
+using matvec_func = std::function<void(const std::vector<float>&, const std::vector<float>&, int, int, std::vector<float>&)>;
+using vecvec_func = std::function<std::vector<float>(const std::vector<float>&, const std::vector<float>&)>;
+using scalarvec_func = std::function<std::vector<float>(float, const std::vector<float>&)>;
+using norm_func = std::function<float(const std::vector<float>&)>;
+using dot_func = std::function<float(const std::vector<float>&, const std::vector<float>&)>;
+using projection_func = std::function<std::vector<float>(const std::vector<float>&, float)>;
+
+class linalg_dispatch{
+    public:
+        static linalg_ops get_ops(linalg_backends backend);
+        static bool is_available(linalg_backends backend);
+};
+
+struct linalg_ops {
+    matvec_func matvec;
+    matvec_func rmatvec;
+
+    vecvec_func vector_subtract;
+    scalarvec_func scalar_vector_prod;
+
+    norm_func l1_norm;
+    norm_func l2_norm;
+    norm_func inf_norm;
+
+    dot_func dot;
+    projection_func l1_norm_projection;
+    
+    std::string backend_name;
+};
