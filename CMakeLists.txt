@@ -7,9 +7,6 @@ set(CMAKE_CXX_COMPILER "C:/mingw64/bin/g++.exe" CACHE STRING "" FORCE)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
-# Find OpenMP
-find_package(OpenMP REQUIRED)
 # Find Python
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 
@@ -34,9 +31,20 @@ target_include_directories(seismic-migration
     PRIVATE 
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/optimization
+        ${PROJECT_SOURCE_DIR}/include/linalg
 )
 
-target_link_libraries(seismic-migration PUBLIC matplot OpenMP::OpenMP_CXX)
+target_link_libraries(seismic-migration PUBLIC matplot)
+
+# Find OpenMP
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    message(STATUS "OpenMP found, enabling support.")
+    target_link_libraries(seismic-migration PUBLIC OpenMP::OpenMP_CXX)
+    target_compile_definitions(seismic-migration PRIVATE HAVE_OPENMP)
+else()
+    message(STATUS "OpenMP not found, building without OpenMP.")
+endif()
 
 include(CTest)
 enable_testing()
