@@ -78,7 +78,7 @@ int main(int, char**){
         plot_util::plot_image(lsm.get_model(), env.n_xs, env.n_zs, "Least Squares Migration");
         plot_util::subplot(2, 2, 3);
         plot_util::plot_image(spgl1.x_out, env.n_xs, env.n_zs, "SPGL1 Migration");
-        //plt::save("../ex/Seismic_Layers.png");
+        plt::save("../ex/Seismic_Layers.png");
         plt::show();
     }
 
