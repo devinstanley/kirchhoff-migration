@@ -85,7 +85,7 @@ class spgl1_bpdn{
         float rerror1, rerror2;
 
         // Tau Related Variabls
-        float tau = 0.0;
+        float tau = 50.0;
         float tau_old;
         bool relchange1 = false;
         bool relchange2 = false;
@@ -116,4 +116,6 @@ class spgl1_bpdn{
         bool dirn_line_search();
 
         void compute_gradient();
+        void set_optimal_params();
+        void initialize_matrices();
 };

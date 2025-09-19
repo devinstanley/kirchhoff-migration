@@ -18,15 +18,7 @@ spgl1_bpdn::spgl1_bpdn(
     ops = linalg_dispatch::get_ops(backend);
 }
 
-void spgl1_bpdn::run(int max_iter) {
-	/*
-	Reference
-    ----------
-    [1] E. van den Berg and M. P. Friedlander, "Probing the Pareto frontier
-             for basis pursuit solutions", SIAM J. on Scientific Computing,
-             31(2):890-912. (2008).
-	*/
-
+void spgl1_bpdn::initialize_matrices(){
     // Reserve Space
     init_x.assign(cols, 0.0f);
     fvals.assign(10, std::numeric_limits<float>::min());
@@ -50,6 +42,28 @@ void spgl1_bpdn::run(int max_iter) {
     for (const auto& row : trans) {
 		At_flat.insert(At_flat.end(), row.begin(), row.end());
 	}
+}
+
+void spgl1_bpdn::set_optimal_params(){
+    sigma = 1e-4 * ops.l2_norm(b);
+    ops.matvec(At_flat, b, cols, rows, rmatvec_result);
+    tau = 0.1 * ops.inf_norm(ops.scalar_vector_prod(-1.0, rmatvec_result));
+    if (verbosity > 0){
+        std::cout << "Optimal Sigma:\t" << sigma << "\tOptimal Tau:\t" << tau << std::endl;
+    }
+}
+
+void spgl1_bpdn::run(int max_iter) {
+	/*
+	Reference
+    ----------
+    [1] E. van den Berg and M. P. Friedlander, "Probing the Pareto frontier
+             for basis pursuit solutions", SIAM J. on Scientific Computing,
+             31(2):890-912. (2008).
+	*/
+
+    initialize_matrices();
+    set_optimal_params();
 
     // Set Initial Iterates
     bnorm = ops.l2_norm(b);
@@ -67,7 +81,7 @@ void spgl1_bpdn::run(int max_iter) {
 	r = (ops.vector_subtract(b, matvec_result));
 	
 	start = std::chrono::high_resolution_clock::now();
-	ops.matvec(At_flat, r, cols, rows, rmatvec_result);
+	ops.rmatvec(At_flat, r, cols, rows, rmatvec_result);
 	stop = std::chrono::high_resolution_clock::now();
 	iter_info.rmatvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
 	iter_info.n_rmatvec += 1;
@@ -244,7 +258,7 @@ void spgl1_bpdn::update_tau() {
 
 
         start = std::chrono::high_resolution_clock::now();
-        ops.matvec(At_flat, r, cols, rows, rmatvec_result);
+        ops.rmatvec(At_flat, r, cols, rows, rmatvec_result);
         stop = std::chrono::high_resolution_clock::now();
         iter_info.rmatvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
         iter_info.n_rmatvec += 1;
@@ -378,7 +392,7 @@ bool spgl1_bpdn::dirn_line_search() {
 
 void spgl1_bpdn::compute_gradient() {
     start = std::chrono::high_resolution_clock::now();
-    ops.matvec(At_flat, r, cols, rows, rmatvec_result);
+    ops.rmatvec(At_flat, r, cols, rows, rmatvec_result);
     stop = std::chrono::high_resolution_clock::now();
     iter_info.rmatvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
     iter_info.n_rmatvec += 1;
