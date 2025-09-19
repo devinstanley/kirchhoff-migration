@@ -107,7 +107,7 @@ namespace cpu_ops {
 
 
         //Create Index Vector
-        std::vector<float> idx(n);
+        std::vector<int> idx(n);
         std::iota(idx.begin(), idx.end(), 0);
 
         //Exit Early
@@ -245,10 +245,9 @@ namespace openmp_ops {
         const float* __restrict__ x = vec.data();
         float maxv = 0.0f;
 
-        #pragma omp simd reduction(max:maxv)
+        #pragma omp parallel for reduction(max:maxv)
         for (int i = 0; i < (int)vec.size(); ++i) {
-            float v = std::fabs(x[i]);
-            if (v > maxv) maxv = v;
+            maxv = std::max(maxv, std::fabs(x[i]));
         }
         return maxv;
     }
@@ -352,6 +351,7 @@ linalg_ops linalg_dispatch::get_ops(linalg_backends backend){
             ops.rmatvec = cpu_ops::matvec; // Same function, different matrix
             ops.vector_subtract = cpu_ops::vector_subtract;
             ops.scalar_vector_prod = cpu_ops::scalar_vector_prod;
+            ops.l1_norm = cpu_ops::l1_norm;
             ops.l2_norm = cpu_ops::l2_norm;
             ops.inf_norm = cpu_ops::inf_norm;
             ops.dot = cpu_ops::dot;
@@ -365,6 +365,7 @@ linalg_ops linalg_dispatch::get_ops(linalg_backends backend){
             ops.rmatvec = openmp_ops::matvec;
             ops.vector_subtract = openmp_ops::vector_subtract;
             ops.scalar_vector_prod = openmp_ops::scalar_vector_prod;
+            ops.l1_norm = openmp_ops::l1_norm;
             ops.l2_norm = openmp_ops::l2_norm;
             ops.inf_norm = openmp_ops::inf_norm;
             ops.dot = openmp_ops::dot;
