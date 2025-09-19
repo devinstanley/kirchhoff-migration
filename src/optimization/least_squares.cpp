@@ -7,39 +7,38 @@
 
 
 least_squares_migration::least_squares_migration(
-    std::vector<std::vector<float>>& L, 
-    std::vector<float>& d
-    ) : L(L), d(d) {
+    std::vector<std::vector<float>>& A, 
+    std::vector<float>& b, linalg_backends backend
+    ) : A(A), b(b) {
     
-    if (L.empty() || L[0].empty()) {
-        throw std::invalid_argument("Forward operator L cannot be empty!");
+    if (A.empty() || A[0].empty()) {
+        throw std::invalid_argument("Forward operator b cannot be empty!");
     }
-    if (d.empty()) {
-        throw std::invalid_argument("Data vector d cannot be empty!");
+    if (b.empty()) {
+        throw std::invalid_argument("Data vector b cannot be empty!");
     }
+
+    rows = A.size();
+    cols = A[0].size();
     
-    rows = L.size();
-    cols = L[0].size();
-    data_size = rows;
-    model_size = cols;
-    
-    if (d.size() != rows) {
+    if (b.size() != rows) {
         throw std::invalid_argument("Data size mismatch with operator dimensions!");
     }
+
+    ops = linalg_dispatch::get_ops(backend);
     
     // Initialize storage vectors
-    model.assign(model_size, 0.0f);
-    gradient.assign(model_size, 0.0f);
-    residual.assign(data_size, 0.0f);
-    predicted_data.assign(data_size, 0.0f);
-    matvec_result.assign(data_size, 0.0f);
-    rmatvec_result.assign(model_size, 0.0f);
+    x_out.assign(cols, 0.0f);
+    g.assign(cols, 0.0f);
+    r.assign(rows, 0.0f);
+    matvec_result.assign(rows, 0.0f);
+    rmatvec_result.assign(cols, 0.0f);
     
     // Initialize step size storage
-    prev_model.assign(model_size, 0.0f);
-    prev_gradient.assign(model_size, 0.0f);
-    model_step.assign(model_size, 0.0f);
-    gradient_step.assign(model_size, 0.0f);
+    x_old.assign(cols, 0.0f);
+    g_old.assign(cols, 0.0f);
+    x_grad.assign(cols, 0.0f);
+    g_grad.assign(cols, 0.0f);
     
     // Precompute flattened operators
     precompute_operators();
@@ -47,25 +46,25 @@ least_squares_migration::least_squares_migration(
 
 void least_squares_migration::precompute_operators() {
     // Reserve space for efficiency
-    L_flat.reserve(rows * cols);
-    Lt_flat.reserve(rows * cols);
-    Lt.assign(cols, std::vector<float>(rows));
+    A_flat.reserve(rows * cols);
+    At_flat.reserve(rows * cols);
+    At.assign(cols, std::vector<float>(rows));
     
     // Flatten L
-    for (const auto& row : L) {
-        L_flat.insert(L_flat.end(), row.begin(), row.end());
+    for (const auto& row : A) {
+        A_flat.insert(A_flat.end(), row.begin(), row.end());
     }
     
     // Compute Transpore
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
-            Lt[j][i] = L[i][j];
+            At[j][i] = A[i][j];
         }
     }
     
     // Flatten Transpose
-    for (const auto& row : Lt) {
-        Lt_flat.insert(Lt_flat.end(), row.begin(), row.end());
+    for (const auto& row : At) {
+        At_flat.insert(At_flat.end(), row.begin(), row.end());
     }
 }
 
@@ -100,13 +99,13 @@ void least_squares_migration::run_simple_gradient(int max_iterations, float tol,
         iter_info.n_iter += 1;
 
         // Store Previous Models for BB Step
-        prev_model = model;
-        prev_gradient = gradient;
+        x_old = x_out;
+        g_old = g;
 
         // Update Model
         #pragma omp parallel for
-        for (size_t i = 0; i < model.size(); i++) {
-            model[i] -= alpha * gradient[i];
+        for (size_t i = 0; i < x_out.size(); i++) {
+            x_out[i] -= alpha * g[i];
         }
 
         // Compute and Store Gradient in Vector
@@ -138,19 +137,19 @@ void least_squares_migration::run_simple_gradient(int max_iterations, float tol,
 
 float least_squares_migration::compute_bb_step_size(){
     // Compute Model Step
-    for (size_t i = 0; i < model_step.size(); i++) {
-        model_step[i] = model[i] - prev_model[i];
+    for (size_t i = 0; i < x_grad.size(); i++) {
+        x_grad[i] = x_out[i] - x_old[i];
     }
 
     // Compute Gradient Step
-    for (size_t i = 0; i < gradient_step.size(); i++) {
-        gradient_step[i] = gradient[i] - prev_gradient[i];
+    for (size_t i = 0; i < g_grad.size(); i++) {
+        g_grad[i] = g[i] - g_old[i];
     }
 
     // Compute BB Step Sizes
-    float s_dot_y = dot_product(model_step, gradient_step);
-    float s_dot_s = dot_product(model_step, model_step);
-    float y_dot_y = dot_product(gradient_step, gradient_step);
+    float s_dot_y = ops.dot(x_grad, g_grad);
+    float s_dot_s = ops.dot(x_grad, x_grad);
+    float y_dot_y = ops.dot(g_grad, g_grad);
 
     float alpha_bb1, alpha_bb2, alpha;
     
@@ -192,33 +191,33 @@ void least_squares_migration::run_conjugate_gradient(int max_iterations, float t
     compute_gradient();
 
     // Initialize Conjugate Gradient Direction
-    std::vector<float> conj_dir(gradient.size(), 0.0f);
+    std::vector<float> conj_dir(g.size(), 0.0f);
     #pragma omp parallel for
     for (size_t i = 0; i < conj_dir.size(); i++) {
-        conj_dir[i] = -gradient[i];
+        conj_dir[i] = -g[i];
     }
 
     for (int iter = 0; iter < max_iterations; iter++) {
         iter_info.n_iter += 1;
 
         // Store Previous Gradient
-        prev_gradient = gradient;
+        g_old = g;
 
         // Line Search for Optimal Step Size
         alpha = armijo_line_search(conj_dir, 1e-6f);
 
         // Update Model
         #pragma omp parallel for
-        for (size_t i = 0; i < model.size(); i++) {
-            model[i] += alpha * conj_dir[i];
+        for (size_t i = 0; i < x_out.size(); i++) {
+            x_out[i] += alpha * conj_dir[i];
         }
 
         // Compute New Gradient
         compute_gradient();
 
         // Fletcher-Reeves Formula
-        r_norm = dot_product(gradient, gradient);
-        r_prev_norm = dot_product(prev_gradient, prev_gradient);
+        r_norm = ops.dot(g, g);
+        r_prev_norm = ops.dot(g_old, g_old);
 
         // Zero Division Check
         if (r_prev_norm < 1e-15f) {
@@ -230,7 +229,7 @@ void least_squares_migration::run_conjugate_gradient(int max_iterations, float t
         // Update Conjugate Direction
         #pragma omp parallel for
         for (size_t i = 0; i < conj_dir.size(); i++) {
-            conj_dir[i] = -gradient[i] + beta * conj_dir[i];
+            conj_dir[i] = -g[i] + beta * conj_dir[i];
         }
 
         // Compute Misfit
@@ -254,7 +253,7 @@ void least_squares_migration::run_conjugate_gradient(int max_iterations, float t
 
 float least_squares_migration::armijo_line_search(const std::vector<float>& direction, float initial_step) {
     float current_misfit = compute_misfit();
-    float directional_derivative = dot_product(gradient, direction);
+    float directional_derivative = ops.dot(g, direction);
     
     // Direction Not in Descent, Return Min Step
     if (directional_derivative >= 0) {
@@ -284,19 +283,19 @@ float least_squares_migration::armijo_line_search(const std::vector<float>& dire
 
 float least_squares_migration::evaluate_objective_at_step(const std::vector<float>& direction, float step_size) {
     // Save Current Model
-    std::vector<float> original_model = model;
+    std::vector<float> original_model = x_out;
     
     // Take Step
     #pragma omp parallel for
-    for (size_t i = 0; i < model.size(); i++) {
-        model[i] += step_size * direction[i];
+    for (size_t i = 0; i < x_out.size(); i++) {
+        x_out[i] += step_size * direction[i];
     }
     
     // Evaluate Misfit
     float objective = compute_misfit();
     
     // Restore Original
-    model = original_model;
+    x_out = original_model;
     
     return objective;
 }
@@ -304,7 +303,7 @@ float least_squares_migration::evaluate_objective_at_step(const std::vector<floa
 void least_squares_migration::compute_gradient(){
     // Forward
     start = std::chrono::high_resolution_clock::now();
-    linalg::matvec(L_flat, model, rows, cols, predicted_data);
+    linalg::matvec(A_flat, x_out, rows, cols, matvec_result);
     stop = std::chrono::high_resolution_clock::now();
     iter_info.matvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
     iter_info.n_matvec += 1;
@@ -314,7 +313,7 @@ void least_squares_migration::compute_gradient(){
     
     // Adjoint
     start = std::chrono::high_resolution_clock::now();
-    linalg::matvec(Lt_flat, residual, cols, rows, gradient);
+    linalg::matvec(At_flat, r, cols, rows, g);
     stop = std::chrono::high_resolution_clock::now();
     iter_info.rmatvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
     iter_info.n_rmatvec += 1;
@@ -322,8 +321,8 @@ void least_squares_migration::compute_gradient(){
 
 void least_squares_migration::compute_residual(){
     #pragma omp parallel for
-    for (int i = 0; i < residual.size(); i++) {
-        residual[i] = predicted_data[i] - d[i];
+    for (int i = 0; i < r.size(); i++) {
+        r[i] = matvec_result[i] - b[i];
     }
 }
 
@@ -332,22 +331,9 @@ float least_squares_migration::compute_misfit() {
     compute_residual();
     
     #pragma omp parallel for reduction(+:misfit)
-    for (size_t i = 0; i < residual.size(); i++) {
-        misfit += residual[i] * residual[i];
+    for (size_t i = 0; i < r.size(); i++) {
+        misfit += r[i] * r[i];
     }
     
     return 0.5f * misfit;
-}
-
-float least_squares_migration::dot_product(const std::vector<float>& a, 
-                                          const std::vector<float>& b) {
-    if (a.size() != b.size()) {
-        throw std::invalid_argument("Vector size mismatch!");
-    }
-    float result = 0.0;
-    #pragma omp parallel for reduction(+:result)
-    for (size_t i = 0; i < a.size(); i++) {
-        result += a[i] * b[i];
-    }
-    return result;
 }

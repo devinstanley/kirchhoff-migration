@@ -5,6 +5,7 @@
 #include "seismic_model.h"
 #include "forward_kirchhoff.h"
 #include "adjoint_kirchhoff.h"
+#include <linalg/linalg_dispatch.h>
 #include <chrono>
 
 enum class optimizers {
@@ -22,42 +23,44 @@ struct lsm_info {
 
 class least_squares_migration{
     public:
-        least_squares_migration(std::vector<std::vector<float>>& L, std::vector<float>& d);
+        least_squares_migration(std::vector<std::vector<float>>& L, std::vector<float>& d, linalg_backends backend = linalg_backends::OPENMP);
 
         void run(optimizers optimizer = optimizers::CONJUGATE_GRADIENT, int max_iterations = 50, float tol = 1e-6, int verbosity = 2);
 
-        const std::vector<float>& get_model() const { return model; }
+        const std::vector<float>& get_model() const { return x_out; }
         float get_final_misfit() const { return final_misfit; }
 
     private:
         // Problem matrices and data
-        std::vector<std::vector<float>>& L;  // Forward operator matrix
-        std::vector<float>& d;               // Observed data
-        std::vector<std::vector<float>> Lt;  // Transposed operator (adjoint)
-        std::vector<float> L_flat;           // Flattened L for efficient matvec
-        std::vector<float> Lt_flat;          // Flattened Lt for efficient rmatvec
+        std::vector<std::vector<float>>& A;  // Forward operator matrix
+        std::vector<float>& b;               // Observed data
+        std::vector<std::vector<float>> At;  // Transposed operator (adjoint)
+        std::vector<float> A_flat;           // Flattened L for efficient matvec
+        std::vector<float> At_flat;          // Flattened Lt for efficient rmatvec
         
-        int model_size;
-        int data_size;
+        // Input Shapes
         int rows, cols;
+
+        // Linalg Backend
+        linalg_ops ops;
 
         // Iteration info
         lsm_info iter_info;
         std::chrono::high_resolution_clock::time_point start, stop;
         
         // Storage vectors
-        std::vector<float> model;
-        std::vector<float> gradient;
-        std::vector<float> residual;
-        std::vector<float> predicted_data;
+        std::vector<float> x_out;
+        std::vector<float> g;
+        std::vector<float> r;
+
         std::vector<float> matvec_result;
         std::vector<float> rmatvec_result;
-
+        
         // Storage for BB Steps (SG) and Line Search (CG)
-        std::vector<float> prev_model;
-        std::vector<float> prev_gradient;
-        std::vector<float> model_step;
-        std::vector<float> gradient_step;
+        std::vector<float> x_old;
+        std::vector<float> g_old;
+        std::vector<float> x_grad;
+        std::vector<float> g_grad;
 
         float final_misfit;
 
@@ -74,7 +77,6 @@ class least_squares_migration{
         void compute_gradient();
         void compute_residual();
         float compute_misfit();
-        float dot_product(const std::vector<float>& a, const std::vector<float>& b);
 
         // Step Size Computation Functions
         float compute_bb_step_size();

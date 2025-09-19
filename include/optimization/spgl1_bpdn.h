@@ -31,52 +31,57 @@ struct info {
 class spgl1_bpdn{
     public:
         //Input Variables
-        std::vector<std::vector<float>>& A;
-        std::vector<float>& b;
+        std::vector<std::vector<float>>& A; // Forward operator matrix
+        std::vector<float>& b;              // Observed data
+        std::vector<std::vector<float>> At; // Transposed operator (adjoint)
+        std::vector<float> At_flat;         // Flattened L for efficient matvec
+        std::vector<float> A_flat;          // Flattened Lt for efficient rmatvec
         float sigma;
+
+        // Input Shapes
+        int rows, cols;
 
         // Linalg Backend
         linalg_ops ops;
 
-        // Timer Items
-        std::chrono::time_point<std::chrono::high_resolution_clock> start;
-        std::chrono::time_point<std::chrono::high_resolution_clock> stop;
+        // Iteration Info
+        info iter_info;
+        std::chrono::high_resolution_clock::time_point start, stop;
 
-        // Running Params
-        int rows;
-        int cols;
-        std::vector<float> init_x;
-        float bnorm;
-        std::vector<float> fvals;
-        std::vector<float> xgrad;
-        std::vector<float> ggrad;
-        std::vector<std::vector<float>> trans;
-        std::vector<float> At_flat;
-        std::vector<float> A_flat;
-        std::vector<float> x;
-        std::vector<float> xold;
-        std::vector<float> xbest;
-        std::vector<float> r;
-        std::vector<float> rold;
+        // Storage Vectors
+        std::vector<float> x_out;
         std::vector<float> g;
-        std::vector<float> gold;
-        float f;
-        float fbest;
-        float fold;
-        std::vector<float> dx;
-        float dx_norm;
+        std::vector<float> r;
+
         std::vector<float> matvec_result;
 	    std::vector<float> rmatvec_result;
 
+        // Storage for Step Optimization
+        std::vector<float> x_old;
+        std::vector<float> g_old;
+        std::vector<float> x_grad;
+        std::vector<float> g_grad;
+
+        float bnorm;
+        std::vector<float> f_vals;
+        std::vector<float> x_best;
+        std::vector<float> r_old;
+        
+        float f;
+        float f_best;
+        float f_old
+        ;
+        std::vector<float> dx;
+        float dx_norm;
+        
+
         // Parameter and Iteration Information Structs
         params args;
-        info iter_info;
 
         // Output
-        std::vector<float> x_out;
-
         int verbosity;
 
+        // Exit Conditions
         float fchange;
         float g_step;
         float gnorm, rnorm;
@@ -91,7 +96,6 @@ class spgl1_bpdn{
         bool relchange2 = false;
 
         // Projected Gradient and Linesearch Vairables
-        bool lnerr = false;
         float gts;
         float snorm = 0;
         float snormold = 0;
@@ -117,5 +121,5 @@ class spgl1_bpdn{
 
         void compute_gradient();
         void set_optimal_params();
-        void initialize_matrices();
+        void precompute_operators();
 };

@@ -16,30 +16,34 @@ spgl1_bpdn::spgl1_bpdn(
     verbosity = 1;
 
     ops = linalg_dispatch::get_ops(backend);
-}
 
-void spgl1_bpdn::initialize_matrices(){
     // Reserve Space
-    init_x.assign(cols, 0.0f);
-    fvals.assign(10, std::numeric_limits<float>::min());
-    xgrad.assign(cols, 0.0f);
-    ggrad.assign(rows, 0.0f);
-    trans.assign(cols, std::vector<float>(rows));
-    At_flat.reserve(rows * cols);
-    A_flat.reserve(rows * cols);
+    x_out.assign(cols, 0.0f);
+    f_vals.assign(10, std::numeric_limits<float>::min());
+    x_grad.assign(cols, 0.0f);
+    g_grad.assign(rows, 0.0f);
     matvec_result.assign(rows, 0.0f);
     rmatvec_result.assign(cols, 0.0f);
 
+    precompute_operators();
+    set_optimal_params();
+}
+
+void spgl1_bpdn::precompute_operators(){
     // Precompute Raveled A and A_T
+    A_flat.reserve(rows * cols);
+    At_flat.reserve(rows * cols);
+    At.assign(cols, std::vector<float>(rows));
+
     for (const auto& row : A) {
 		A_flat.insert(A_flat.end(), row.begin(), row.end());
 	}
     for (int i = 0; i < rows; ++i) {
 		for (int j = 0; j < cols; ++j) {
-			trans[j][i] = A[i][j];
+			At[j][i] = A[i][j];
 		}
 	}
-    for (const auto& row : trans) {
+    for (const auto& row : At) {
 		At_flat.insert(At_flat.end(), row.begin(), row.end());
 	}
 }
@@ -54,6 +58,10 @@ void spgl1_bpdn::set_optimal_params(){
 }
 
 void spgl1_bpdn::run(int max_iter) {
+    if (max_iter <= 0) {
+        throw std::invalid_argument("Max iterations must be positive!");
+    }
+
 	/*
 	Reference
     ----------
@@ -62,18 +70,15 @@ void spgl1_bpdn::run(int max_iter) {
              31(2):890-912. (2008).
 	*/
 
-    initialize_matrices();
-    set_optimal_params();
-
     // Set Initial Iterates
     bnorm = ops.l2_norm(b);
     auto start = std::chrono::high_resolution_clock::now();
-	x = ops.l1_norm_projection(init_x, tau);
+	x_out = ops.l1_norm_projection(x_out, tau);
 	auto stop = std::chrono::high_resolution_clock::now();
 	iter_info.proj_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
 
 	start = std::chrono::high_resolution_clock::now();
-	ops.matvec(A_flat, x, rows, cols, matvec_result);
+	ops.matvec(A_flat, x_out, rows, cols, matvec_result);
 	stop = std::chrono::high_resolution_clock::now();
 	iter_info.matvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
 	iter_info.n_matvec += 1;
@@ -90,14 +95,14 @@ void spgl1_bpdn::run(int max_iter) {
 
     // Objective Function
 	f = pow(ops.l2_norm(r), 2.0) / 2.0;
-	fvals[0] = f;
-	fbest = f;
-	fold = f;
-	xbest = x;
+	f_vals[0] = f;
+	f_best = f;
+	f_old = f;
+	x_best = x_out;
 
     //Compute Projected Gradient Direction
 	start = std::chrono::high_resolution_clock::now();
-	dx = ops.vector_subtract(ops.l1_norm_projection(ops.vector_subtract(x, g), tau), x);
+	dx = ops.vector_subtract(ops.l1_norm_projection(ops.vector_subtract(x_out, g), tau), x_out);
 	stop = std::chrono::high_resolution_clock::now();
 	iter_info.proj_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
 
@@ -140,16 +145,16 @@ void spgl1_bpdn::run(int max_iter) {
         // Failed - Try w Feasable Dirn Search
         if (line_err){
             // Reset Iterates
-            x = xold;
-            f = fold;
+            x_out = x_old;
+            f = f_old;
 
             line_err = dirn_line_search();
         }
 
         // Failed Again -> Revert to Previous Iterate and Damp Max Step
         if (line_err){
-            x = xold;
-			f = fold;
+            x_out = x_old;
+			f = f_old;
 
             if (1) {
 				args.max_step = args.max_step / 10;
@@ -166,16 +171,15 @@ void spgl1_bpdn::run(int max_iter) {
 
         // Update Function History
 		if (f > pow(sigma, 2.0) / 2) {
-			fvals[iter_info.n_iter % 3] = f;
-			if (fbest > f) {
-				fbest = f;
-				xbest = x;
+			f_vals[iter_info.n_iter % 3] = f;
+			if (f_best > f) {
+				f_best = f;
+				x_best = x_out;
 			}
 		}
     }
 
     std::cout << "Completed SPGL1 Migration" << std::endl;
-    x_out = x;
 
     return;
 }
@@ -219,7 +223,7 @@ bool spgl1_bpdn::check_exit_conditions() {
 
 void spgl1_bpdn::update_tau() {
     // Check if Tau Needs to be Updated
-    fchange = abs(f - fold);
+    fchange = abs(f - f_old);
     if (fchange <= args.dec_tol * f) {
         relchange1 = true;
     }
@@ -244,12 +248,12 @@ void spgl1_bpdn::update_tau() {
 
     if (tau < tau_old) {
         start = std::chrono::high_resolution_clock::now();
-        x = ops.l1_norm_projection(x, tau);
+        x_out = ops.l1_norm_projection(x_out, tau);
         stop = std::chrono::high_resolution_clock::now();
         iter_info.proj_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
 
         start = std::chrono::high_resolution_clock::now();
-        ops.matvec(A_flat, x, rows, cols, matvec_result);
+        ops.matvec(A_flat, x_out, rows, cols, matvec_result);
         stop = std::chrono::high_resolution_clock::now();
         iter_info.matvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
         iter_info.n_matvec += 1;
@@ -266,17 +270,17 @@ void spgl1_bpdn::update_tau() {
         g = ops.scalar_vector_prod(-1.0, rmatvec_result);
 
         f = pow(ops.l2_norm(r), 2.0) / 2.0;
-        fvals.assign(10, -1000000.0);
-        fvals.push_back(f);
+        f_vals.assign(10, -1000000.0);
+        f_vals.push_back(f);
     }
 }
 
 void spgl1_bpdn::update_iterates() {
     iter_info.n_iter += 1;
-    xold = x;
-    fold = f;
-    gold = g;
-    rold = r;
+    x_old = x_out;
+    f_old = f;
+    g_old = g;
+    r_old = r;
 }
 
 bool spgl1_bpdn::curve_line_search() {
@@ -291,12 +295,12 @@ bool spgl1_bpdn::curve_line_search() {
     // Line Search Start
     while (1) {
         start = std::chrono::high_resolution_clock::now();
-        x = ops.l1_norm_projection(ops.vector_subtract(xold, ops.scalar_vector_prod(step * scale, b_search)), tau);
+        x_out = ops.l1_norm_projection(ops.vector_subtract(x_old, ops.scalar_vector_prod(step * scale, b_search)), tau);
         stop = std::chrono::high_resolution_clock::now();
         iter_info.proj_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
 
         start = std::chrono::high_resolution_clock::now();
-        ops.matvec(A_flat, x, rows, cols, matvec_result);
+        ops.matvec(A_flat, x_out, rows, cols, matvec_result);
         stop = std::chrono::high_resolution_clock::now();
         iter_info.matvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
         iter_info.n_matvec += 1;
@@ -304,7 +308,7 @@ bool spgl1_bpdn::curve_line_search() {
         r = ops.vector_subtract(b, matvec_result);
 
         f = abs(ops.dot(r, r)) / 2.0f;
-        s = ops.vector_subtract(x, xold);
+        s = ops.vector_subtract(x_out, x_old);
         float gts = scale*ops.dot(b_search, s);
 
         //Error Exit Conditions
@@ -317,7 +321,7 @@ bool spgl1_bpdn::curve_line_search() {
             return true;
         }
         //Exit Condition 
-        if (f < *std::max_element(fvals.begin(), fvals.end()) + gamma * step * gts) {
+        if (f < *std::max_element(f_vals.begin(), f_vals.end()) + gamma * step * gts) {
             return false;
         }
 
@@ -327,9 +331,9 @@ bool spgl1_bpdn::curve_line_search() {
 
         //Dampen Search
         snormold = snorm;
-        snorm = ops.l2_norm(s) / sqrt((float)x.size());
+        snorm = ops.l2_norm(s) / sqrt((float)x_out.size());
         if (abs(snorm - snormold) <= 1e-6 * snorm) {
-            gnorm = ops.l2_norm(b_search) / sqrt((double)x.size());
+            gnorm = ops.l2_norm(b_search) / sqrt((double)x_out.size());
             scale = snorm / gnorm / pow(2.0, nsafe);
             nsafe += 1;
         }
@@ -341,7 +345,7 @@ bool spgl1_bpdn::dirn_line_search() {
     step = 1;
     n_iters = 0;
     start = std::chrono::high_resolution_clock::now();
-    dx = ops.vector_subtract(ops.l1_norm_projection(ops.vector_subtract(x, ops.scalar_vector_prod(g_step, g)), tau), x);
+    dx = ops.vector_subtract(ops.l1_norm_projection(ops.vector_subtract(x_out, ops.scalar_vector_prod(g_step, g)), tau), x_out);
     stop = std::chrono::high_resolution_clock::now();
     iter_info.proj_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
     
@@ -352,10 +356,10 @@ bool spgl1_bpdn::dirn_line_search() {
 
     // Line Search Start
     while (1) {
-        x = ops.vector_subtract(xold, ops.scalar_vector_prod(step, dx));
+        x_out = ops.vector_subtract(x_old, ops.scalar_vector_prod(step, dx));
 
         start = std::chrono::high_resolution_clock::now();
-        ops.matvec(A_flat, x, rows, cols, matvec_result);
+        ops.matvec(A_flat, x_out, rows, cols, matvec_result);
         stop = std::chrono::high_resolution_clock::now();
         iter_info.matvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
         iter_info.n_matvec += 1;
@@ -364,7 +368,7 @@ bool spgl1_bpdn::dirn_line_search() {
 
 
         f = abs(ops.dot(r, r)) / 2.0;
-        if (f < *std::max_element(fvals.begin(), fvals.end()) + gamma * step * gtd) {
+        if (f < *std::max_element(f_vals.begin(), f_vals.end()) + gamma * step * gtd) {
             return false;
         }
         if (n_iters >= 10) {
@@ -374,7 +378,7 @@ bool spgl1_bpdn::dirn_line_search() {
             step /= 2;
         }
         else {
-            float denominator = 2 * (f - fold - step * gtd);
+            float denominator = 2 * (f - f_old - step * gtd);
             if (std::abs(denominator) > 1e-10) {  // Avoid division by zero
                 tmp = (-gtd * step * step) / denominator;
                 if (tmp < 0.1 || tmp > 0.9 * step || !std::isfinite(tmp)) {
@@ -399,12 +403,12 @@ void spgl1_bpdn::compute_gradient() {
 
     g = ops.scalar_vector_prod(-1.0, rmatvec_result);
 
-    xgrad = ops.vector_subtract(x, xold);
-    ggrad = ops.vector_subtract(g, gold);
-    if (ops.dot(xgrad, ggrad) <= 0) {
+    x_grad = ops.vector_subtract(x_out, x_old);
+    g_grad = ops.vector_subtract(g, g_old);
+    if (ops.dot(x_grad, g_grad) <= 0) {
         g_step = args.max_step;
     }
     else {
-        g_step = std::min(args.max_step, std::max(args.min_step, ops.dot(xgrad, xgrad) / ops.dot(xgrad, ggrad)));
+        g_step = std::min(args.max_step, std::max(args.min_step, ops.dot(x_grad, x_grad) / ops.dot(x_grad, g_grad)));
     }
 }
