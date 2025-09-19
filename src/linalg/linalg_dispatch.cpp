@@ -151,7 +151,7 @@ namespace cpu_ops {
                 alpha_prev = alpha[alpha_idx];
             }
             else {
-                alpha_prev = alpha[alpha.size()];
+                alpha_prev = alpha[n];
             }
 
             for (int i = 0; i < n; i++) {
@@ -322,7 +322,7 @@ namespace openmp_ops {
                 alpha_prev = alpha[alpha_idx];
             }
             else {
-                alpha_prev = alpha[alpha.size()];
+                alpha_prev = alpha[n];
             }
 
             for (int i = 0; i < n; i++) {
