@@ -105,7 +105,7 @@ class spgl1_bpdn{
         std::vector<float> s;
         std::vector<float> b_search;
 
-        spgl1_bpdn(std::vector<std::vector<float>>& A, std::vector<float>& b, float sigma, const params args = params(), linalg_backends backend = linalg_backends::CPU);
+        spgl1_bpdn(std::vector<std::vector<float>>& A, std::vector<float>& b, float sigma, const params args = params(), linalg_backends backend = linalg_backends::OPENMP);
         void run(int max_iter = 100);
         void update_iterates();
         void update_tau();
