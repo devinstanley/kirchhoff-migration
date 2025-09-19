@@ -10,21 +10,36 @@ spgl1_bpdn::spgl1_bpdn(
 	float sigma, params args, linalg_backends backend):
 	A(A), b(b), sigma(sigma), args(args)
 {
+    if (A.empty() || A[0].empty()) {
+        throw std::invalid_argument("Forward operator b cannot be empty!");
+    }
+    if (b.empty()) {
+        throw std::invalid_argument("Data vector b cannot be empty!");
+    }
+
     info iter_info = info();
     rows = A.size();
     cols = A[0].size();
     verbosity = 1;
 
+    if (b.size() != rows) {
+        throw std::invalid_argument("Data size mismatch with operator dimensions!");
+    }
+
     ops = linalg_dispatch::get_ops(backend);
 
-    // Reserve Space
+    // Initialize Main Storage Space
     x_out.assign(cols, 0.0f);
+    g.assign(cols, 0.0f);
+    r.assign(rows, 0.0f);
+    matvec_result.assign(rows, 0.0f);
+
     f_vals.assign(10, std::numeric_limits<float>::min());
     x_grad.assign(cols, 0.0f);
-    g_grad.assign(rows, 0.0f);
-    matvec_result.assign(rows, 0.0f);
-    rmatvec_result.assign(cols, 0.0f);
+    g_grad.assign(cols, 0.0f);
+    
 
+    // Precompute Flattened Operators
     precompute_operators();
     set_optimal_params();
 }
@@ -35,14 +50,18 @@ void spgl1_bpdn::precompute_operators(){
     At_flat.reserve(rows * cols);
     At.assign(cols, std::vector<float>(rows));
 
+    // Flatten A
     for (const auto& row : A) {
 		A_flat.insert(A_flat.end(), row.begin(), row.end());
 	}
+
+    // Compute Transpose
     for (int i = 0; i < rows; ++i) {
 		for (int j = 0; j < cols; ++j) {
 			At[j][i] = A[i][j];
 		}
 	}
+    // Flatten Transpose
     for (const auto& row : At) {
 		At_flat.insert(At_flat.end(), row.begin(), row.end());
 	}
@@ -50,8 +69,8 @@ void spgl1_bpdn::precompute_operators(){
 
 void spgl1_bpdn::set_optimal_params(){
     sigma = 1e-4 * ops.l2_norm(b);
-    ops.matvec(At_flat, b, cols, rows, rmatvec_result);
-    tau = 0.1 * ops.inf_norm(ops.scalar_vector_prod(-1.0, rmatvec_result));
+    ops.matvec(At_flat, b, cols, rows, g);
+    tau = 0.1 * ops.inf_norm(ops.scalar_vector_prod(-1.0, g));
     if (verbosity > 0){
         std::cout << "Optimal Sigma:\t" << sigma << "\tOptimal Tau:\t" << tau << std::endl;
     }
@@ -83,15 +102,13 @@ void spgl1_bpdn::run(int max_iter) {
 	iter_info.matvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
 	iter_info.n_matvec += 1;
 
-	r = (ops.vector_subtract(b, matvec_result));
+	compute_residual();
 	
 	start = std::chrono::high_resolution_clock::now();
-	ops.rmatvec(At_flat, r, cols, rows, rmatvec_result);
+	ops.rmatvec(At_flat, r, cols, rows, g);
 	stop = std::chrono::high_resolution_clock::now();
 	iter_info.rmatvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
 	iter_info.n_rmatvec += 1;
-
-	g = ops.scalar_vector_prod(-1.0, rmatvec_result);
 
     // Objective Function
 	f = pow(ops.l2_norm(r), 2.0) / 2.0;
@@ -258,16 +275,16 @@ void spgl1_bpdn::update_tau() {
         iter_info.matvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
         iter_info.n_matvec += 1;
 
-        r = (ops.vector_subtract(b, matvec_result));
+        compute_residual();
 
 
         start = std::chrono::high_resolution_clock::now();
-        ops.rmatvec(At_flat, r, cols, rows, rmatvec_result);
+        ops.rmatvec(At_flat, r, cols, rows, g);
         stop = std::chrono::high_resolution_clock::now();
         iter_info.rmatvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
         iter_info.n_rmatvec += 1;
 
-        g = ops.scalar_vector_prod(-1.0, rmatvec_result);
+        
 
         f = pow(ops.l2_norm(r), 2.0) / 2.0;
         f_vals.assign(10, -1000000.0);
@@ -305,7 +322,7 @@ bool spgl1_bpdn::curve_line_search() {
         iter_info.matvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
         iter_info.n_matvec += 1;
 
-        r = ops.vector_subtract(b, matvec_result);
+        compute_residual();
 
         f = abs(ops.dot(r, r)) / 2.0f;
         s = ops.vector_subtract(x_out, x_old);
@@ -364,7 +381,7 @@ bool spgl1_bpdn::dirn_line_search() {
         iter_info.matvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
         iter_info.n_matvec += 1;
 
-        r = ops.vector_subtract(b, matvec_result);
+        compute_residual();
 
 
         f = abs(ops.dot(r, r)) / 2.0;
@@ -395,13 +412,12 @@ bool spgl1_bpdn::dirn_line_search() {
 }
 
 void spgl1_bpdn::compute_gradient() {
+    // Line Searches Already Compute Forward and Residual - Only Need Adjoint
     start = std::chrono::high_resolution_clock::now();
-    ops.rmatvec(At_flat, r, cols, rows, rmatvec_result);
+    ops.matvec(At_flat, r, cols, rows, g);
     stop = std::chrono::high_resolution_clock::now();
     iter_info.rmatvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
     iter_info.n_rmatvec += 1;
-
-    g = ops.scalar_vector_prod(-1.0, rmatvec_result);
 
     x_grad = ops.vector_subtract(x_out, x_old);
     g_grad = ops.vector_subtract(g, g_old);
@@ -411,4 +427,8 @@ void spgl1_bpdn::compute_gradient() {
     else {
         g_step = std::min(args.max_step, std::max(args.min_step, ops.dot(x_grad, x_grad) / ops.dot(x_grad, g_grad)));
     }
+}
+
+void spgl1_bpdn::compute_residual(){
+    r = ops.vector_subtract(matvec_result, b);
 }

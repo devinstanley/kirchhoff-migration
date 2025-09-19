@@ -54,7 +54,6 @@ class least_squares_migration{
         std::vector<float> r;
 
         std::vector<float> matvec_result;
-        std::vector<float> rmatvec_result;
         
         // Storage for BB Steps (SG) and Line Search (CG)
         std::vector<float> x_old;

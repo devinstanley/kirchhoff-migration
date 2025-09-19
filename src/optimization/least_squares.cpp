@@ -1,5 +1,4 @@
 #include <iostream>
-
 #include "least_squares.h"
 #include "linalg.h"
 #include <limits>
@@ -8,9 +7,9 @@
 
 least_squares_migration::least_squares_migration(
     std::vector<std::vector<float>>& A, 
-    std::vector<float>& b, linalg_backends backend
-    ) : A(A), b(b) {
-    
+    std::vector<float>& b, linalg_backends backend):
+    A(A), b(b)
+{
     if (A.empty() || A[0].empty()) {
         throw std::invalid_argument("Forward operator b cannot be empty!");
     }
@@ -18,8 +17,10 @@ least_squares_migration::least_squares_migration(
         throw std::invalid_argument("Data vector b cannot be empty!");
     }
 
+    iter_info = lsm_info();
     rows = A.size();
     cols = A[0].size();
+
     
     if (b.size() != rows) {
         throw std::invalid_argument("Data size mismatch with operator dimensions!");
@@ -27,12 +28,11 @@ least_squares_migration::least_squares_migration(
 
     ops = linalg_dispatch::get_ops(backend);
     
-    // Initialize storage vectors
+    // Initialize Main Storage Space
     x_out.assign(cols, 0.0f);
     g.assign(cols, 0.0f);
     r.assign(rows, 0.0f);
     matvec_result.assign(rows, 0.0f);
-    rmatvec_result.assign(cols, 0.0f);
     
     // Initialize step size storage
     x_old.assign(cols, 0.0f);
@@ -40,28 +40,27 @@ least_squares_migration::least_squares_migration(
     x_grad.assign(cols, 0.0f);
     g_grad.assign(cols, 0.0f);
     
-    // Precompute flattened operators
+    // Precompute Flattened Operators
     precompute_operators();
 }
 
 void least_squares_migration::precompute_operators() {
-    // Reserve space for efficiency
+    // Precompute Raveled A and A_T
     A_flat.reserve(rows * cols);
     At_flat.reserve(rows * cols);
     At.assign(cols, std::vector<float>(rows));
     
-    // Flatten L
+    // Flatten A
     for (const auto& row : A) {
         A_flat.insert(A_flat.end(), row.begin(), row.end());
     }
     
-    // Compute Transpore
+    // Compute Transpose
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
             At[j][i] = A[i][j];
         }
     }
-    
     // Flatten Transpose
     for (const auto& row : At) {
         At_flat.insert(At_flat.end(), row.begin(), row.end());
@@ -103,10 +102,7 @@ void least_squares_migration::run_simple_gradient(int max_iterations, float tol,
         g_old = g;
 
         // Update Model
-        #pragma omp parallel for
-        for (size_t i = 0; i < x_out.size(); i++) {
-            x_out[i] -= alpha * g[i];
-        }
+        x_out = ops.vector_subtract(x_old, ops.scalar_vector_prod(alpha, g));
 
         // Compute and Store Gradient in Vector
         compute_gradient();
@@ -137,14 +133,10 @@ void least_squares_migration::run_simple_gradient(int max_iterations, float tol,
 
 float least_squares_migration::compute_bb_step_size(){
     // Compute Model Step
-    for (size_t i = 0; i < x_grad.size(); i++) {
-        x_grad[i] = x_out[i] - x_old[i];
-    }
+    x_grad = ops.vector_subtract(x_out, x_old);
 
     // Compute Gradient Step
-    for (size_t i = 0; i < g_grad.size(); i++) {
-        g_grad[i] = g[i] - g_old[i];
-    }
+    g_grad = ops.vector_subtract(g, g_old);
 
     // Compute BB Step Sizes
     float s_dot_y = ops.dot(x_grad, g_grad);
@@ -191,11 +183,7 @@ void least_squares_migration::run_conjugate_gradient(int max_iterations, float t
     compute_gradient();
 
     // Initialize Conjugate Gradient Direction
-    std::vector<float> conj_dir(g.size(), 0.0f);
-    #pragma omp parallel for
-    for (size_t i = 0; i < conj_dir.size(); i++) {
-        conj_dir[i] = -g[i];
-    }
+    std::vector<float> conj_dir = ops.scalar_vector_prod(-1.0, g);
 
     for (int iter = 0; iter < max_iterations; iter++) {
         iter_info.n_iter += 1;
@@ -303,37 +291,31 @@ float least_squares_migration::evaluate_objective_at_step(const std::vector<floa
 void least_squares_migration::compute_gradient(){
     // Forward
     start = std::chrono::high_resolution_clock::now();
-    linalg::matvec(A_flat, x_out, rows, cols, matvec_result);
+    ops.matvec(A_flat, x_out, rows, cols, matvec_result);
     stop = std::chrono::high_resolution_clock::now();
     iter_info.matvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
     iter_info.n_matvec += 1;
     
-    // Compute residual
+    // Compute Residual
     compute_residual();
     
     // Adjoint
     start = std::chrono::high_resolution_clock::now();
-    linalg::matvec(At_flat, r, cols, rows, g);
+    ops.matvec(At_flat, r, cols, rows, g);
     stop = std::chrono::high_resolution_clock::now();
     iter_info.rmatvec_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
     iter_info.n_rmatvec += 1;
 }
 
 void least_squares_migration::compute_residual(){
-    #pragma omp parallel for
-    for (int i = 0; i < r.size(); i++) {
-        r[i] = matvec_result[i] - b[i];
-    }
+    r = ops.vector_subtract(matvec_result, b);
 }
 
 float least_squares_migration::compute_misfit() {
     float misfit = 0.0f;
     compute_residual();
-    
-    #pragma omp parallel for reduction(+:misfit)
-    for (size_t i = 0; i < r.size(); i++) {
-        misfit += r[i] * r[i];
-    }
+
+    misfit = ops.dot(r, r);
     
     return 0.5f * misfit;
 }

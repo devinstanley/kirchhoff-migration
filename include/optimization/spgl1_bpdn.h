@@ -54,7 +54,6 @@ class spgl1_bpdn{
         std::vector<float> r;
 
         std::vector<float> matvec_result;
-	    std::vector<float> rmatvec_result;
 
         // Storage for Step Optimization
         std::vector<float> x_old;
@@ -122,4 +121,5 @@ class spgl1_bpdn{
         void compute_gradient();
         void set_optimal_params();
         void precompute_operators();
+        void compute_residual();
 };
