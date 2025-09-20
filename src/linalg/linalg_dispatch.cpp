@@ -6,6 +6,9 @@
 #ifdef HAVE_OPENMP
 #include <omp.h>
 #endif
+#ifdef HAVE_CUDA
+#include "cuda_ops.cuh"
+#endif
 #include <numeric>
 
 // CPU Only Implementations
@@ -372,7 +375,20 @@ linalg_ops linalg_dispatch::get_ops(linalg_backends backend){
             ops.backend_name = "OpenMP";
             break;
 #endif
-
+#ifdef HAVE_CUDA
+        case linalg_backends::CUDA:
+            ops.matvec = cuda_ops::matvec;
+            ops.rmatvec = cuda_ops::matvec;
+            ops.vector_subtract = cuda_ops::vector_subtract;
+            ops.scalar_vector_prod = cuda_ops::scalar_vector_prod;
+            ops.l1_norm = cuda_ops::l1_norm;
+            ops.l2_norm = cuda_ops::l2_norm;
+            ops.inf_norm = cuda_ops::inf_norm;
+            ops.dot = cuda_ops::dot;
+            ops.l1_norm_projection = cuda_ops::l1_norm_projection;
+            ops.backend_name = "CUDA";
+            break;
+#endif
         default:
             return get_ops(linalg_backends::CPU);
     }
@@ -387,6 +403,12 @@ bool linalg_dispatch::is_available(linalg_backends backend) {
             
         case linalg_backends::OPENMP:
 #ifdef HAVE_OPENMP
+            return true;
+#else
+            return false;
+#endif
+        case linalg_backends::CUDA:
+#ifdef HAVE_CUDA
             return true;
 #else
             return false;

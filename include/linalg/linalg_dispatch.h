@@ -6,7 +6,8 @@
 
 enum class linalg_backends{
     CPU,
-    OPENMP
+    OPENMP,
+    CUDA
 };
 
 // Function pointer types for all linalg operations
