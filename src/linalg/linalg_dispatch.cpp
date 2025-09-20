@@ -14,9 +14,9 @@ namespace cpu_ops {
                         const std::vector<float>& vec,
                         int m, int n,
                         std::vector<float>& res) {
-        const float* __restrict__ A = mat.data();
-        const float* __restrict__ x = vec.data();
-        float* __restrict__ y = res.data();
+        const float* __restrict A = mat.data();
+        const float* __restrict x = vec.data();
+        float* __restrict y = res.data();
 
         for (int i = 0; i < m; ++i) {
             float temp = 0.0f;
@@ -32,9 +32,9 @@ namespace cpu_ops {
     std::vector<float> vector_subtract(const std::vector<float>& vec1, const std::vector<float>& vec2){
         int n = (int)vec1.size();
         std::vector<float> sub(n);
-        const float* __restrict__ x1 = vec1.data();
-        const float* __restrict__ x2 = vec2.data();
-        float* __restrict__ y = sub.data();
+        const float* __restrict x1 = vec1.data();
+        const float* __restrict x2 = vec2.data();
+        float* __restrict y = sub.data();
 
         for (int i = 0; i < n; ++i) {
             y[i] = x1[i] - x2[i];
@@ -45,8 +45,8 @@ namespace cpu_ops {
     std::vector<float> scalar_vector_prod(const float& scalar, const std::vector<float>& vec){
         int n = (int)vec.size();
         std::vector<float> prod(n);
-        const float* __restrict__ x = vec.data();
-        float* __restrict__ y = prod.data();
+        const float* __restrict x = vec.data();
+        float* __restrict y = prod.data();
 
         for (int i = 0; i < n; ++i) {
             y[i] = scalar * x[i];
@@ -55,7 +55,7 @@ namespace cpu_ops {
     }
 
     float l1_norm(const std::vector<float>& vec){
-        const float* __restrict__ x = vec.data();
+        const float* __restrict x = vec.data();
         float norm = 0.0f;
         
         for (int i = 0; i < (int)vec.size(); ++i) {
@@ -64,7 +64,7 @@ namespace cpu_ops {
         return norm;
     }
     float l2_norm(const std::vector<float>& vec){
-        const float* __restrict__ x = vec.data();
+        const float* __restrict x = vec.data();
         float norm = 0.0f;
 
         for (int i = 0; i < (int)vec.size(); ++i) {
@@ -73,7 +73,7 @@ namespace cpu_ops {
         return std::sqrt(norm);
     }
     float inf_norm(const std::vector<float>& vec){
-        const float* __restrict__ x = vec.data();
+        const float* __restrict x = vec.data();
         float maxv = 0.0f;
 
         for (int i = 0; i < (int)vec.size(); ++i) {
@@ -84,8 +84,8 @@ namespace cpu_ops {
     }
 
     float dot(const std::vector<float>& vec1, const std::vector<float>& vec2){
-        const float* __restrict__ x1 = vec1.data();
-        const float* __restrict__ x2 = vec2.data();
+        const float* __restrict x1 = vec1.data();
+        const float* __restrict x2 = vec2.data();
         float sum = 0.0f;
 
         for (int i = 0; i < (int)vec1.size(); ++i) {
@@ -95,7 +95,7 @@ namespace cpu_ops {
     }
 
     std::vector<float> l1_norm_projection(std::vector<float> vec, float tau){
-        int n = vec.size();
+        int n = (int)vec.size();
         std::vector<float> proj(n, 0);
         std::vector<float> alpha(n + 1, 0);
         std::vector<float> sum_b(n, 0);
@@ -177,16 +177,16 @@ namespace openmp_ops {
                         const std::vector<float>& vec,
                         int m, int n,
                         std::vector<float>& res) {
-        const float* __restrict__ A = mat.data();
-        const float* __restrict__ x = vec.data();
-        float* __restrict__ y = res.data();
+        const float* __restrict A = mat.data();
+        const float* __restrict x = vec.data();
+        float* __restrict y = res.data();
 
         #pragma omp parallel for
         for (int i = 0; i < m; ++i) {
             float temp = 0.0f;
             const float* row = A + i * n;
 
-            #pragma omp simd reduction(+:temp)
+            //#pragma omp simd reduction(+:temp)
             for (int j = 0; j < n; ++j) {
                 temp += row[j] * x[j];
             }
@@ -197,9 +197,9 @@ namespace openmp_ops {
     std::vector<float> vector_subtract(const std::vector<float>& vec1, const std::vector<float>& vec2){
         int n = (int)vec1.size();
         std::vector<float> sub(n);
-        const float* __restrict__ x1 = vec1.data();
-        const float* __restrict__ x2 = vec2.data();
-        float* __restrict__ y = sub.data();
+        const float* __restrict x1 = vec1.data();
+        const float* __restrict x2 = vec2.data();
+        float* __restrict y = sub.data();
 
         #pragma omp simd
         for (int i = 0; i < n; ++i) {
@@ -211,8 +211,8 @@ namespace openmp_ops {
     std::vector<float> scalar_vector_prod(const float& scalar, const std::vector<float>& vec){
         int n = (int)vec.size();
         std::vector<float> prod(n);
-        const float* __restrict__ x = vec.data();
-        float* __restrict__ y = prod.data();
+        const float* __restrict x = vec.data();
+        float* __restrict y = prod.data();
 
         #pragma omp simd
         for (int i = 0; i < n; ++i) {
@@ -222,30 +222,29 @@ namespace openmp_ops {
     }
 
     float l1_norm(const std::vector<float>& vec){
-        const float* __restrict__ x = vec.data();
+        const float* __restrict x = vec.data();
         float norm = 0.0f;
         
-        #pragma omp simd reduction(+:norm)
+        //#pragma omp simd reduction(+:norm)
         for (int i = 0; i < (int)vec.size(); ++i) {
             norm += std::fabs(x[i]);  // use fabsf for float
         }
         return norm;
     }
     float l2_norm(const std::vector<float>& vec){
-        const float* __restrict__ x = vec.data();
+        const float* __restrict x = vec.data();
         float norm = 0.0f;
 
-        #pragma omp simd reduction(+:norm)
+        //#pragma omp simd reduction(+:norm)
         for (int i = 0; i < (int)vec.size(); ++i) {
             norm += x[i] * x[i];
         }
         return std::sqrt(norm);
     }
     float inf_norm(const std::vector<float>& vec){
-        const float* __restrict__ x = vec.data();
+        const float* __restrict x = vec.data();
         float maxv = 0.0f;
 
-        #pragma omp parallel for reduction(max:maxv)
         for (int i = 0; i < (int)vec.size(); ++i) {
             maxv = std::max(maxv, std::fabs(x[i]));
         }
@@ -253,11 +252,11 @@ namespace openmp_ops {
     }
 
     float dot(const std::vector<float>& vec1, const std::vector<float>& vec2){
-        const float* __restrict__ x1 = vec1.data();
-        const float* __restrict__ x2 = vec2.data();
+        const float* __restrict x1 = vec1.data();
+        const float* __restrict x2 = vec2.data();
         float sum = 0.0f;
 
-        #pragma omp simd reduction(+:sum)
+        //#pragma omp simd reduction(+:sum)
         for (int i = 0; i < (int)vec1.size(); ++i) {
             sum += x1[i] * x2[i];
         }
@@ -265,7 +264,7 @@ namespace openmp_ops {
     }
 
     std::vector<float> l1_norm_projection(std::vector<float> vec, float tau){
-        int n = vec.size();
+        int n = (int)vec.size();
         std::vector<float> proj(n, 0);
         std::vector<float> alpha(n + 1, 0);
         std::vector<float> sum_b(n, 0);
@@ -277,7 +276,7 @@ namespace openmp_ops {
 
 
         //Create Index Vector
-        std::vector<float> idx(n);
+        std::vector<int> idx(n);
         std::iota(idx.begin(), idx.end(), 0);
 
         //Exit Early

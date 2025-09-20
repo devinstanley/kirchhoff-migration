@@ -10,11 +10,11 @@ struct params {
 	int iter_limit = 3000;
 	int verbosity = 0;
 	float max_step = 1e5;
-	float min_step = 1e-16;
-	float bp_tol = 1e-6;
-	float ls_tol = 1e-6;
-	float opt_tol = 1e-4;
-	float dec_tol = 1e-4;
+	float min_step = 1e-16f;
+	float bp_tol = 1e-6f;
+	float ls_tol = 1e-6f;
+	float opt_tol = 1e-4f;
+	float dec_tol = 1e-4f;
 };
 
 struct info {
@@ -100,7 +100,7 @@ class spgl1_bpdn{
         float snormold = 0;
         float step = 1;
         float scale = 1;
-        float gamma = 1e-4;
+        float gamma = 1e-4f;
         int nsafe = 0;
         int n_iters = 0;
         float n, gtd;

@@ -18,8 +18,8 @@ spgl1_bpdn::spgl1_bpdn(
     }
 
     info iter_info = info();
-    rows = A.size();
-    cols = A[0].size();
+    rows = (int)A.size();
+    cols = (int)A[0].size();
     verbosity = 1;
 
     if (b.size() != rows) {
@@ -68,9 +68,9 @@ void spgl1_bpdn::precompute_operators(){
 }
 
 void spgl1_bpdn::set_optimal_params(){
-    sigma = 1e-4 * ops.l2_norm(b);
+    sigma = 1e-4f * ops.l2_norm(b);
     ops.matvec(At_flat, b, cols, rows, g);
-    tau = 0.1 * ops.inf_norm(ops.scalar_vector_prod(-1.0, g));
+    tau = 0.1f * ops.inf_norm(ops.scalar_vector_prod(-1.0, g));
     if (verbosity > 0){
         std::cout << "Optimal Sigma:\t" << sigma << "\tOptimal Tau:\t" << tau << std::endl;
     }
@@ -111,7 +111,7 @@ void spgl1_bpdn::run(int max_iter) {
 	iter_info.n_rmatvec += 1;
 
     // Objective Function
-	f = pow(ops.l2_norm(r), 2.0) / 2.0;
+	f = powf(ops.l2_norm(r), 2.0f) / 2.0f;
 	f_vals[0] = f;
 	f_best = f;
 	f_old = f;
@@ -221,7 +221,7 @@ bool spgl1_bpdn::check_exit_conditions() {
         std::cout << "Step Size Collapsed" << std::endl;
         return true;
     }
-    if (rgap <= std::max(args.opt_tol, rerror2) or rerror1 <= args.opt_tol) {
+    if (rgap <= std::max(args.opt_tol, rerror2) || rerror1 <= args.opt_tol) {
         if (rnorm <= sigma) {
             std::cout << "Suboptimal BP Sol" << std::endl;
             return true;
@@ -253,7 +253,7 @@ void spgl1_bpdn::update_tau() {
     else {
         relchange2 = false;
     }
-    if ((relchange1 and (rnorm > 2.0 * sigma)) or (relchange2 and (rnorm <= 2.0 * sigma))) {} // Need to Update Tau
+    if ((relchange1 && (rnorm > 2.0 * sigma)) || (relchange2 && (rnorm <= 2.0 * sigma))) {} // Need to Update Tau
     else {
         return;
     }
@@ -286,7 +286,7 @@ void spgl1_bpdn::update_tau() {
 
         
 
-        f = pow(ops.l2_norm(r), 2.0) / 2.0;
+        f = pow(ops.l2_norm(r), 2.0f) / 2.0f;
         f_vals.assign(10, -1000000.0);
         f_vals.push_back(f);
     }
@@ -348,10 +348,10 @@ bool spgl1_bpdn::curve_line_search() {
 
         //Dampen Search
         snormold = snorm;
-        snorm = ops.l2_norm(s) / sqrt((float)x_out.size());
+        snorm = ops.l2_norm(s) / sqrtf((float)x_out.size());
         if (abs(snorm - snormold) <= 1e-6 * snorm) {
-            gnorm = ops.l2_norm(b_search) / sqrt((double)x_out.size());
-            scale = snorm / gnorm / pow(2.0, nsafe);
+            gnorm = ops.l2_norm(b_search) / sqrtf((float)x_out.size());
+            scale = snorm / gnorm / powf(2.0f, (float)nsafe);
             nsafe += 1;
         }
     }
@@ -384,7 +384,7 @@ bool spgl1_bpdn::dirn_line_search() {
         compute_residual();
 
 
-        f = abs(ops.dot(r, r)) / 2.0;
+        f = abs(ops.dot(r, r)) / 2.0f;
         if (f < *std::max_element(f_vals.begin(), f_vals.end()) + gamma * step * gtd) {
             return false;
         }

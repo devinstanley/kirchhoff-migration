@@ -26,22 +26,22 @@ seismic_model::seismic_model(
 	rf(rf),
 	vel(vel)
 {
-    n_srcs = src_coords.size();
-	n_rcvs = rcv_coords.size();
+    n_srcs = (int)src_coords.size();
+	n_rcvs = (int)rcv_coords.size();
 }
 
 void seismic_model::generate_model(std::vector<std::vector<float>> points, std::vector<float> amplitudes, float noise) {
 	ref_space.resize(n_xs, std::vector<float>(n_zs, 0.0f));
 
 	//Setup Random Distribution
-	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+	unsigned seed = (unsigned)std::chrono::system_clock::now().time_since_epoch().count();
 	std::default_random_engine generator(seed);
 	std::normal_distribution<float> distribution(0.0, 1.0);
 
 
 	auto point_to_cord = [this](std::vector<std::vector<float>>& ref_space, std::vector<float> point) {
-		int x = point[0] / dx;
-		int z = point[1] / dz;
+		int x = (int)(point[0] / dx);
+		int z = (int)(point[1] / dz);
 
 		if (x >= n_xs || z >= n_zs)
 			throw std::invalid_argument("Point Outside of Environment");
@@ -70,14 +70,14 @@ void seismic_model::generate_model(std::vector<std::vector<float>> points, std::
 }
 
 float seismic_model::ricker_wavelet(float tt) {
-	static const float PI = atan(1.0) * 4;
+	static const float PI = atanf(1.0) * 4.0f;
 	static const float PI_25 = powf(PI, 0.25);
 	static const float PI2 = PI * PI;
 	static const float rf2 = rf * rf;
-	static const float A = PI_25 / sqrt(2.0 * rf);
+	static const float A = PI_25 / sqrtf(2.0f * rf);
 
 	float intermed = PI2 * rf2 * tt * tt;
-	float wavelet = A * (1.0 - 2.0 * intermed) * exp(-intermed);
+	float wavelet = A * (1.0f - 2.0f * intermed) * exp(-intermed);
 	return wavelet;
 }
 

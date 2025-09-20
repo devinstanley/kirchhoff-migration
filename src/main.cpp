@@ -17,7 +17,7 @@ int main(int, char**){
         26, // # of Sources/Receivers
         100, // # of Time Steps
         50, // # of Spatial Steps
-        0.002, // Time Step (s)
+        0.002f, // Time Step (s)
         3, // Spatial Step (m)
         0,
         20,

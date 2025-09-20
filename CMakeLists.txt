@@ -1,11 +1,10 @@
 cmake_minimum_required(VERSION 3.10.0)
-project(seismic-migration VERSION 0.1.0 LANGUAGES C CXX)
-
-set(CMAKE_C_COMPILER "C:/mingw64/bin/gcc.exe" CACHE STRING "" FORCE)
-set(CMAKE_CXX_COMPILER "C:/mingw64/bin/g++.exe" CACHE STRING "" FORCE)
+project(seismic-migration VERSION 0.1.0 LANGUAGES C CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 # Find Python
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
@@ -36,14 +35,40 @@ target_include_directories(seismic-migration
 
 target_link_libraries(seismic-migration PUBLIC matplot)
 
-# Find OpenMP
+# Find OpenMP (Optional)
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     message(STATUS "OpenMP found, enabling support.")
     target_link_libraries(seismic-migration PUBLIC OpenMP::OpenMP_CXX)
     target_compile_definitions(seismic-migration PRIVATE HAVE_OPENMP)
+    target_compile_options(seismic-migration PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:/openmp:experimental>)
 else()
     message(STATUS "OpenMP not found, building without OpenMP.")
+endif()
+
+## Find CUDA (Optional)
+find_package(CUDAToolkit)
+if(CUDAToolkit_FOUND)
+    message(STATUS "CUDA found, enabling support.")
+
+    # Add CUDA source files if they exist
+    file(GLOB_RECURSE CUDA_SOURCES "src/cuda/*.cu")
+    if(CUDA_SOURCES)
+        target_sources(seismic-migration PRIVATE ${CUDA_SOURCES})
+    endif()
+
+    set_target_properties(seismic-migration PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+    )
+
+    target_compile_options(seismic-migration PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:--cuda-gpu-arch=sm_80 -O3>)
+
+    target_link_libraries(seismic-migration PRIVATE CUDA::cudart)
+    target_compile_definitions(seismic-migration PRIVATE HAVE_CUDA)
+else()
+    message(STATUS "CUDA not found, building without CUDA.")
 endif()
 
 include(CTest)

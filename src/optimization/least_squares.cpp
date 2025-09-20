@@ -1,6 +1,5 @@
 #include <iostream>
 #include "least_squares.h"
-#include "linalg.h"
 #include <limits>
 #include <numeric>
 
@@ -196,7 +195,7 @@ void least_squares_migration::run_conjugate_gradient(int max_iterations, float t
 
         // Update Model
         #pragma omp parallel for
-        for (size_t i = 0; i < x_out.size(); i++) {
+        for (int i = 0; i < x_out.size(); i++) {
             x_out[i] += alpha * conj_dir[i];
         }
 
@@ -216,7 +215,7 @@ void least_squares_migration::run_conjugate_gradient(int max_iterations, float t
 
         // Update Conjugate Direction
         #pragma omp parallel for
-        for (size_t i = 0; i < conj_dir.size(); i++) {
+        for (int i = 0; i < conj_dir.size(); i++) {
             conj_dir[i] = -g[i] + beta * conj_dir[i];
         }
 
@@ -275,7 +274,7 @@ float least_squares_migration::evaluate_objective_at_step(const std::vector<floa
     
     // Take Step
     #pragma omp parallel for
-    for (size_t i = 0; i < x_out.size(); i++) {
+    for (int i = 0; i < x_out.size(); i++) {
         x_out[i] += step_size * direction[i];
     }
     
