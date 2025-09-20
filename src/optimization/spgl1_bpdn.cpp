@@ -68,9 +68,9 @@ void spgl1_bpdn::precompute_operators(){
 }
 
 void spgl1_bpdn::set_optimal_params(){
-    sigma = 1e-4f * ops.l2_norm(b);
+    sigma = 1e-8f * ops.l2_norm(b);
     ops.matvec(At_flat, b, cols, rows, g);
-    tau = 0.1f * ops.inf_norm(ops.scalar_vector_prod(-1.0, g));
+    tau = 0.05f * ops.inf_norm(ops.scalar_vector_prod(-1.0, g));
     if (verbosity > 0){
         std::cout << "Optimal Sigma:\t" << sigma << "\tOptimal Tau:\t" << tau << std::endl;
     }
