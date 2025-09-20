@@ -17,8 +17,8 @@ least_squares_migration::least_squares_migration(
     }
 
     iter_info = lsm_info();
-    rows = A.size();
-    cols = A[0].size();
+    rows = (int)A.size();
+    cols = (int)A[0].size();
 
     
     if (b.size() != rows) {
