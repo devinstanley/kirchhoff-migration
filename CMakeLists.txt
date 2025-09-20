@@ -12,14 +12,10 @@ find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 # Download Matplotlib Cpp
 include(FetchContent)
 FetchContent_Declare(matplotplusplus
-        GIT_REPOSITORY https://github.com/alandefreitas/matplotplusplus
-        GIT_TAG origin/master)
-
-FetchContent_GetProperties(matplotplusplus)
-if(NOT matplotplusplus_POPULATED)
-    FetchContent_Populate(matplotplusplus)
-    add_subdirectory(${matplotplusplus_SOURCE_DIR} ${matplotplusplus_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
+    GIT_REPOSITORY https://github.com/alandefreitas/matplotplusplus
+    GIT_TAG origin/master
+)
+FetchContent_MakeAvailable(matplotplusplus)
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
