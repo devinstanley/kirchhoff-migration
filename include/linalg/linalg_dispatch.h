@@ -10,12 +10,12 @@ enum class linalg_backends{
 };
 
 // Function pointer types for all linalg operations
-using matvec_func = std::function<void(const std::vector<float>&, const std::vector<float>&, int, int, std::vector<float>&)>;
-using vecvec_func = std::function<std::vector<float>(const std::vector<float>&, const std::vector<float>&)>;
-using scalarvec_func = std::function<std::vector<float>(const float&, const std::vector<float>&)>;
-using norm_func = std::function<float(const std::vector<float>&)>;
-using dot_func = std::function<float(const std::vector<float>&, const std::vector<float>&)>;
-using projection_func = std::function<std::vector<float>(std::vector<float>, float)>;
+using matvec_func     = void(*)(const std::vector<float>&, const std::vector<float>&, int, int, std::vector<float>&);
+using vecvec_func     = std::vector<float>(*)(const std::vector<float>&, const std::vector<float>&);
+using scalarvec_func  = std::vector<float>(*)(const float&, const std::vector<float>&);
+using norm_func       = float(*)(const std::vector<float>&);
+using dot_func        = float(*)(const std::vector<float>&, const std::vector<float>&);
+using projection_func = std::vector<float>(*)(std::vector<float>, float);
 
 struct linalg_ops {
     matvec_func matvec;
