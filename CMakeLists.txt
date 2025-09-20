@@ -49,7 +49,7 @@ if(CUDAToolkit_FOUND)
     message(STATUS "CUDA found, enabling support.")
 
     # Add CUDA source files if they exist
-    file(GLOB_RECURSE CUDA_SOURCES "src/cuda/*.cu")
+    file(GLOB_RECURSE CUDA_SOURCES "src/*.cu")
     if(CUDA_SOURCES)
         target_sources(seismic-migration PRIVATE ${CUDA_SOURCES})
     endif()
@@ -59,7 +59,9 @@ if(CUDAToolkit_FOUND)
     )
 
     target_compile_options(seismic-migration PRIVATE
-        $<$<COMPILE_LANGUAGE:CUDA>:--cuda-gpu-arch=sm_80 -O3>)
+        $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:Debug>>:-arch=sm_80 -g -O0 --extended-lambda>
+        $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:Release>>:-arch=sm_80 -O3 --extended-lambda>
+        $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:RelWithDebInfo>>:-arch=sm_80 -O3 -g --extended-lambda>)
 
     target_link_libraries(seismic-migration PRIVATE CUDA::cudart)
     target_compile_definitions(seismic-migration PRIVATE HAVE_CUDA)
