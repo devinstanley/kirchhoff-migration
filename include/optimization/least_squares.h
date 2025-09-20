@@ -23,7 +23,7 @@ struct lsm_info {
 
 class least_squares_migration{
     public:
-        least_squares_migration(std::vector<std::vector<float>>& L, std::vector<float>& d, linalg_backends backend = linalg_backends::OPENMP);
+        least_squares_migration(std::vector<std::vector<float>>& L, std::vector<float>& d, linalg_backends backend = linalg_backends::CUDA);
 
         void run(optimizers optimizer = optimizers::CONJUGATE_GRADIENT, int max_iterations = 50, float tol = 1e-6, int verbosity = 2);
 
