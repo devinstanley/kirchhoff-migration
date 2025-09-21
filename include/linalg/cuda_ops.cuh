@@ -22,7 +22,5 @@ float l1_norm(const std::vector<float>& vec);
 float l2_norm(const std::vector<float>& vec);
 float inf_norm(const std::vector<float>& vec);
 
-std::vector<float> l1_norm_projection(std::vector<float> vec, float tau);
-
 } // namespace cuda_ops
 #endif

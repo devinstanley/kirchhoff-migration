@@ -16,7 +16,7 @@ using vecvec_func     = std::vector<float>(*)(const std::vector<float>&, const s
 using scalarvec_func  = std::vector<float>(*)(const float&, const std::vector<float>&);
 using norm_func       = float(*)(const std::vector<float>&);
 using dot_func        = float(*)(const std::vector<float>&, const std::vector<float>&);
-using projection_func = std::vector<float>(*)(std::vector<float>, float);
+using projection_func = std::vector<float>(*)(std::vector<float>&, float);
 
 struct linalg_ops {
     matvec_func matvec;

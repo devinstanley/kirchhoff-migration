@@ -100,10 +100,5 @@ float inf_norm(const std::vector<float>& vec) {
                                     [] __device__ (float x) { return fabsf(x); },
                                     0.0f, thrust::maximum<float>());
 }
-
-std::vector<float> l1_norm_projection(std::vector<float> vec, float tau) {
-    return vec;
-}
-
 }
 #endif

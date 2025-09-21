@@ -10,6 +10,7 @@
 #include "cuda_ops.cuh"
 #endif
 #include <numeric>
+#include <queue>
 
 // CPU Only Implementations
 namespace cpu_ops {
@@ -97,76 +98,48 @@ namespace cpu_ops {
         return sum;
     }
 
-    std::vector<float> l1_norm_projection(std::vector<float> vec, float tau){
-        int n = (int)vec.size();
-        std::vector<float> proj(n, 0);
-        std::vector<float> alpha(n + 1, 0);
-        std::vector<float> sum_b(n, 0);
-        std::vector<int> sgn(n, 1);
-        int alpha_idx = -1;
-        float alpha_prev;
+    std::vector<float> l1_norm_projection(std::vector<float>& vec, float tau){
+        // Quick Exit Check Before Allocating Space
         float norm = l1_norm(vec);
-        float cur_sum = 0;
-
-
-        //Create Index Vector
-        std::vector<int> idx(n);
-        std::iota(idx.begin(), idx.end(), 0);
-
-        //Exit Early
         if (tau >= norm) {
             return vec;
         }
-        else if (tau < std::numeric_limits<float>::epsilon()) {
-            return proj;
-        }
-        else {
-            //Take Absolute Value of Input
-            for (int ii = 0; ii < n; ii++) {
-                if (vec[ii] < 0) {
-                    sgn[ii] = -1;
-                }
-                vec[ii] = abs(vec[ii]);
-            }
-            //Reverse Argsort
-            std::stable_sort(idx.begin(), idx.end(),
-                [&vec](size_t i1, size_t i2) {return vec[i1] < vec[i2]; });
-            std::reverse(idx.begin(), idx.end());
 
-            //Reverse Sort B
-            std::sort(vec.begin(), vec.end(), std::greater<>());
-
-            for (int i = 0; i < n; i++) {
-                cur_sum += vec[i];
-                sum_b[i] = cur_sum - tau;
-            }
-
-            for (int i = 1; i < n + 1; i++) {
-                alpha[i] = sum_b[i - 1] / i;
-            }
-            for (int i = 0; i < n; i++) {
-                if (alpha[i + 1] >= vec[i]) {
-                    alpha_idx = i;
-                    break;
-                }
-            }
-            if (alpha_idx >= 0) {
-                alpha_prev = alpha[alpha_idx];
-            }
-            else {
-                alpha_prev = alpha[n];
-            }
-
-            for (int i = 0; i < n; i++) {
-                proj[idx[i]] = vec[i] - alpha_prev;
-                if (proj[idx[i]] < 0) {
-                    proj[idx[i]] = 0;
-                }
-            }
+        // Check For Valid Tau
+        int n = (int)vec.size();
+        if (tau < std::numeric_limits<float>::epsilon()) {
+            return std::vector<float>(n, 0);
         }
 
-        for (int i = 0; i < n; i++) {
-            proj[i] *= sgn[i];
+        const float* __restrict x = vec.data();
+        std::priority_queue<float> heap;
+        for (int i = 0; i < n; i++){
+            heap.push(std::fabs(x[i]));
+        }
+
+        float gamma = 0.0f;
+        float delta = 0.0f;
+        float nu = -tau;
+        float cmin;
+
+        for (int i = 0; i < n; i++){
+            cmin = heap.top();
+            nu += cmin;
+            gamma = nu / (i + 1);
+
+            if (gamma >= cmin){
+                break;
+            }
+
+            heap.pop();
+            delta = gamma;
+        }
+
+        // Soft-threshold
+        std::vector<float> proj(n, 0.0);
+        float* __restrict y = proj.data();
+        for (int i = 0; i < n; i++){
+            y[i] = std::copysign(std::max(std::fabs(y[i]) - delta, 0.0f), y[i]);
         }
 
         return proj;
@@ -265,81 +238,6 @@ namespace openmp_ops {
         }
         return sum;
     }
-
-    std::vector<float> l1_norm_projection(std::vector<float> vec, float tau){
-        int n = (int)vec.size();
-        std::vector<float> proj(n, 0);
-        std::vector<float> alpha(n + 1, 0);
-        std::vector<float> sum_b(n, 0);
-        std::vector<int> sgn(n, 1);
-        int alpha_idx = -1;
-        float alpha_prev;
-        float norm = l1_norm(vec);
-        float cur_sum = 0;
-
-
-        //Create Index Vector
-        std::vector<int> idx(n);
-        std::iota(idx.begin(), idx.end(), 0);
-
-        //Exit Early
-        if (tau >= norm) {
-            return vec;
-        }
-        else if (tau < std::numeric_limits<float>::epsilon()) {
-            return proj;
-        }
-        else {
-            //Take Absolute Value of Input
-            for (int ii = 0; ii < n; ii++) {
-                if (vec[ii] < 0) {
-                    sgn[ii] = -1;
-                }
-                vec[ii] = abs(vec[ii]);
-            }
-            //Reverse Argsort
-            std::stable_sort(idx.begin(), idx.end(),
-                [&vec](size_t i1, size_t i2) {return vec[i1] < vec[i2]; });
-            std::reverse(idx.begin(), idx.end());
-
-            //Reverse Sort B
-            std::sort(vec.begin(), vec.end(), std::greater<>());
-
-            for (int i = 0; i < n; i++) {
-                cur_sum += vec[i];
-                sum_b[i] = cur_sum - tau;
-            }
-
-            for (int i = 1; i < n + 1; i++) {
-                alpha[i] = sum_b[i - 1] / i;
-            }
-            for (int i = 0; i < n; i++) {
-                if (alpha[i + 1] >= vec[i]) {
-                    alpha_idx = i;
-                    break;
-                }
-            }
-            if (alpha_idx >= 0) {
-                alpha_prev = alpha[alpha_idx];
-            }
-            else {
-                alpha_prev = alpha[n];
-            }
-
-            for (int i = 0; i < n; i++) {
-                proj[idx[i]] = vec[i] - alpha_prev;
-                if (proj[idx[i]] < 0) {
-                    proj[idx[i]] = 0;
-                }
-            }
-        }
-
-        for (int i = 0; i < n; i++) {
-            proj[i] *= sgn[i];
-        }
-
-        return proj;
-    }
 }
 #endif
 
@@ -371,7 +269,7 @@ linalg_ops linalg_dispatch::get_ops(linalg_backends backend){
             ops.l2_norm = openmp_ops::l2_norm;
             ops.inf_norm = openmp_ops::inf_norm;
             ops.dot = openmp_ops::dot;
-            ops.l1_norm_projection = openmp_ops::l1_norm_projection;
+            ops.l1_norm_projection = cpu_ops::l1_norm_projection;
             ops.backend_name = "OpenMP";
             break;
 #endif
@@ -385,7 +283,7 @@ linalg_ops linalg_dispatch::get_ops(linalg_backends backend){
             ops.l2_norm = cuda_ops::l2_norm;
             ops.inf_norm = cuda_ops::inf_norm;
             ops.dot = cuda_ops::dot;
-            ops.l1_norm_projection = cuda_ops::l1_norm_projection;
+            ops.l1_norm_projection = cpu_ops::l1_norm_projection;
             ops.backend_name = "CUDA";
             break;
 #endif
